@@ -55,6 +55,8 @@ def compute_overall_tardiness(jobs, products,staticConfigurationFilePath,plot) -
         # collect everything from here with the tardiness to analyse performance
         # study the datatype of the jobDetails and number of features here
         # correlation analysis of the jobDetails part 
+        # learning trends of each agent w.r.t priority
+        # priority as due date 
         completion_time = jobDetails['completionTime']
         due_date = products[jobDetails['productName']]['duedate']
         percent_diff.append(((completion_time - due_date)*100)/due_date)
