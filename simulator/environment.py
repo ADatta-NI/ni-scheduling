@@ -197,7 +197,17 @@ class SchedulingEnv(MultiAgentEnv):
 
         # Check if any product arrived at this time and add corresponding root operations to global bag
         self._check_and_add_products_to_global_bag()
-
+        
+        # add job setup time here so that it can be collected later 
+        # visualise all possible time related variables 
+        # cyclomatic complexity of the dependency trees
+        # no of jobs count of job names 
+        # ratio of longest to shortest test times 
+        # variance of test times 
+        # tightness of the cap for the resources 
+        # arrival time 
+        # 
+        
         # Update operation and job progress/completion
         for testerName, testerDetails in self.testers.items():
             if testerDetails['testerStatus'] == TesterStatus.BUSY:
