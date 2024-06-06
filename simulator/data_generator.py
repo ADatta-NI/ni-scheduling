@@ -319,7 +319,7 @@ class DataGenerator:
 
         nodes = list(G.nodes)
         edges = list(G.edges)
-
+        ## add nodes and edges to a dataset for analysis 
         return nodes, edges
 
 
