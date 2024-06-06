@@ -3,6 +3,16 @@ import json
 import networkx as nx
 import numpy as np
 from constants import DATA_GENERATOR_TRAIN_SEED, DATA_GENERATOR_TEST_SEED 
+
+# add job setup time here so that it can be collected later 
+# visualise all possible time related variables 
+# cyclomatic complexity of the dependency trees
+# no of jobs count of job names 
+# ratio of longest to shortest test times 
+# variance of test times 
+# tightness of the cap for the resources 
+# arrival time 
+# both measure and record 
 class DataGenerator:
     def __init__(self, config=None):
         self.config = config or {}
