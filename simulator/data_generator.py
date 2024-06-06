@@ -133,7 +133,7 @@ class DataGenerator:
             test_time = test_time / len(opDetails['compatibleConfigurations'])
             setup_time = setup_time / len(opDetails['compatibleConfigurations'])
             weight += (test_time + setup_time)
-
+        # record the weights in a dataset
         return weight
 
 
