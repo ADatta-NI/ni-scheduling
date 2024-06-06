@@ -199,6 +199,7 @@ if __name__ == '__main__':
             print("opname", opName)
             #print(opDetails['completionTime'])
             #print(opDetails['duedate'])
+            #collect due date for priority and collect completion time for performance 
             if opDetails['completionTime'] > opDetails['duedate']:
 
                 print(opName, opDetails['completionTime'], opDetails['duedate'])
