@@ -1,1 +1,0 @@
-{"type": "Algorithm", "checkpoint_version": "1.1", "format": "cloudpickle", "state_file": "/home/adatta14/PycharmProjects/ni-scheduling-projectcheckpoint_100/algorithm_state.pkl", "policy_ids": ["os-policy", "ms-policy"], "ray_version": "3.0.0.dev0", "ray_commit": "10009390b0ff61875b45cbab75052a89332b528e"}
