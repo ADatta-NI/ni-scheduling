@@ -1,0 +1,141 @@
+{
+    "configurations": {
+        "count": 2,
+        "items": {
+            "K1": {
+                "index": 0,
+                "setupTimes": [
+                    0,
+                    3
+                ]
+            },
+            "K2": {
+                "index": 1,
+                "setupTimes": [
+                    5,
+                    0
+                ]
+            }
+        }
+    },
+    "testers": {
+        "count": 4,
+        "items": {
+            "T1": {
+                "supportedConfigurations": [
+                    "K1"
+                ]
+            },
+            "T2": {
+                "supportedConfigurations": [
+                    "K1"
+                ]
+            },
+            "T3": {
+                "supportedConfigurations": [
+                    "K2"
+                ]
+            },
+            "T4": {
+                "supportedConfigurations": [
+                    "K1",
+                    "K2"
+                ]
+            }
+        }
+    },
+    "operations": {
+        "count": 3,
+        "items": {
+            "O1": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 35.829767851883176,
+                        "std": 0.0
+                    },
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 44.260994261996395,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2",
+                    "K1"
+                ]
+            },
+            "O2": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 18.98650200736425,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2"
+                ]
+            },
+            "O3": {
+                "estimatedTestTime": {
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 33.419624777769954,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K1"
+                ]
+            }
+        }
+    },
+    "products": {
+        "count": 2,
+        "items": {
+            "P1": {
+                "index": 0,
+                "arrival": 0,
+                "quantity": 1,
+                "duedate": 88.6063570578666,
+                "operations": [
+                    "O2",
+                    "O3",
+                    "O1"
+                ],
+                "dependencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        2,
+                        1
+                    ]
+                ]
+            },
+            "P2": {
+                "index": 1,
+                "arrival": 5.52750403830555,
+                "quantity": 3,
+                "duedate": 74.24325888571377,
+                "operations": [
+                    "O1",
+                    "O2",
+                    "O3"
+                ],
+                "dependencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        2,
+                        0
+                    ]
+                ]
+            }
+        }
+    }
+}

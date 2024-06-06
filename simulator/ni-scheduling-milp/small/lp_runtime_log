@@ -1,0 +1,101 @@
+PS C:\Users\byagant1\Documents\Research Assistantship\NI\Impl> python3 .\Universal_Lab_Tester_Problem_MILP.py
+All Variables added!
+All Constraints added!
+Solving with Glop solver v9.6.2534
+OPTIMAL Solution
+Objective value = 0.0
+Number of variables = 313        
+Number of constraints = 1153     
+What are running on each machine:
+On Machine: 0
+0, 3, 0
+1, 0, 0
+1, 1, 0
+0, 1, 1
+0, 3, 1
+1, 1, 1
+1, 2, 1
+1, 3, 1
+0, 0, 2
+0, 1, 2
+0, 3, 2
+1, 0, 2
+1, 1, 2
+On Machine: 1
+0, 0, 0
+0, 1, 0
+0, 2, 0
+0, 3, 0
+1, 0, 0
+1, 3, 0
+0, 0, 1
+0, 1, 1
+0, 2, 1
+0, 3, 1
+1, 2, 1
+0, 0, 2
+0, 3, 2
+1, 0, 2
+1, 1, 2
+On Machine: 2
+0, 1, 0
+0, 3, 0
+1, 0, 0
+1, 2, 0
+0, 1, 1
+0, 2, 1
+0, 3, 1
+1, 2, 1
+1, 3, 1
+0, 0, 2
+0, 3, 2
+1, 1, 2
+1, 2, 2
+1, 3, 2
+What is the starting operation on each machine
+Starting Op on M: 0::  [(0, 0), (1, 1)]
+Starting Op on M: 1::  [(0, 0), (0, 2)]
+Starting Op on M: 2::  [(1, 2), (1, 3)]
+What is the ending operation on each machine
+Ending Op on M: 0::  [(0, 3), (1, 3)]
+Ending Op on M: 1::  [(0, 0), (0, 2)]
+Ending Op on M: 2::  [(1, 2), (1, 3)]
+What are the dependencies on each machine:
+On Machine: 0
+(0, 1) -> (0, 3)
+(0, 1) -> (1, 1)
+(1, 0) -> (0, 3)
+(1, 0) -> (1, 3)
+(1, 1) -> (0, 1)
+(1, 1) -> (1, 0)
+(1, 2) -> (1, 0)
+On Machine: 1
+(0, 1) -> (0, 0)
+(0, 2) -> (0, 0)
+(0, 2) -> (0, 1)
+(0, 2) -> (0, 3)
+(0, 2) -> (1, 0)
+(0, 3) -> (0, 0)
+(1, 0) -> (0, 1)
+On Machine: 2
+(0, 0) -> (0, 1)
+(0, 3) -> (1, 0)
+(1, 1) -> (1, 0)
+(1, 3) -> (1, 2)
+Operation wise results:
+Operation: (0, 0) Machine: (1, 0) Start: 0.0 RT: 0.0 PT: 0.0
+Operation: (0, 1) Machine: (0, 2) Start: 0.0 RT: 0.0 PT: 0.0
+Operation: (0, 2) Machine: (1, 0) Start: 0.0 RT: 0.0 PT: 0.0
+Operation: (0, 3) Machine: (0, 2) Start: 0.0 RT: 1000.3538499999972 PT: 0.0
+Operation: (1, 0) Machine: (0, 2) Start: 0.0 RT: 0.0 PT: 0.0
+Operation: (1, 1) Machine: (0, 0) Start: 0.0 RT: 0.0 PT: 0.0
+Operation: (1, 2) Machine: (2, 0) Start: 0.0 RT: 0.0 PT: 0.0
+Operation: (1, 3) Machine: (0, 1) Start: 0.0 RT: 0.0 PT: 0.0
+
+Metrics:
+Problem solved in 6279.000000 milliseconds
+Problem solved in 315 iterations
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1683502180.275506   14720 glop_interface.cc:244] Number of nodes only available for discrete problems
+Problem solved in -1 branch-and-bound nodes
+PS C:\Users\byagant1\Documents\Research Assistantship\NI\Impl> 

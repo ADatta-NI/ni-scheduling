@@ -1,0 +1,226 @@
+{
+    "configurations": {
+        "count": 2,
+        "items": {
+            "K1": {
+                "index": 0,
+                "setupTimes": [
+                    0,
+                    5
+                ]
+            },
+            "K2": {
+                "index": 1,
+                "setupTimes": [
+                    5,
+                    0
+                ]
+            }
+        }
+    },
+    "testers": {
+        "count": 2,
+        "items": {
+            "T1": {
+                "supportedConfigurations": [
+                    "K2"
+                ]
+            },
+            "T2": {
+                "supportedConfigurations": [
+                    "K1",
+                    "K2"
+                ]
+            }
+        }
+    },
+    "operations": {
+        "count": 7,
+        "items": {
+            "O1": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 40.5158525799926,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2"
+                ]
+            },
+            "O2": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 44.443184274967685,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2"
+                ]
+            },
+            "O3": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 19.814552779087357,
+                        "std": 0.0
+                    },
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 45.693837405424674,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2",
+                    "K1"
+                ]
+            },
+            "O4": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 49.859217205795034,
+                        "std": 0.0
+                    },
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 34.346955179405114,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2",
+                    "K1"
+                ]
+            },
+            "O5": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 34.174423740671656,
+                        "std": 0.0
+                    },
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 44.419582562664026,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2",
+                    "K1"
+                ]
+            },
+            "O6": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 16.45114347621323,
+                        "std": 0.0
+                    },
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 20.708401735998923,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2",
+                    "K1"
+                ]
+            },
+            "O7": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 26.233057963103082,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2"
+                ]
+            }
+        }
+    },
+    "products": {
+        "count": 2,
+        "items": {
+            "P1": {
+                "index": 0,
+                "arrival": 0,
+                "quantity": 1,
+                "duedate": 83.54581483428157,
+                "operations": [
+                    "O1",
+                    "O6",
+                    "O3",
+                    "O4",
+                    "O7"
+                ],
+                "dependencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        4,
+                        1
+                    ],
+                    [
+                        4,
+                        2
+                    ],
+                    [
+                        4,
+                        3
+                    ]
+                ]
+            },
+            "P2": {
+                "index": 1,
+                "arrival": 6.165300289699559,
+                "quantity": 2,
+                "duedate": 92.62918362048876,
+                "operations": [
+                    "O1",
+                    "O7",
+                    "O6",
+                    "O4",
+                    "O3",
+                    "O2"
+                ],
+                "dependencies": [
+                    [
+                        2,
+                        1
+                    ],
+                    [
+                        4,
+                        1
+                    ],
+                    [
+                        4,
+                        0
+                    ],
+                    [
+                        5,
+                        1
+                    ],
+                    [
+                        5,
+                        2
+                    ],
+                    [
+                        5,
+                        3
+                    ]
+                ]
+            }
+        }
+    }
+}

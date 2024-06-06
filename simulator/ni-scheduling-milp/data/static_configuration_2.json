@@ -1,0 +1,194 @@
+{
+    "configurations": {
+        "count": 2,
+        "items": {
+            "K1": {
+                "index": 0,
+                "setupTimes": [
+                    0,
+                    4
+                ]
+            },
+            "K2": {
+                "index": 1,
+                "setupTimes": [
+                    2,
+                    0
+                ]
+            }
+        }
+    },
+    "testers": {
+        "count": 4,
+        "items": {
+            "T1": {
+                "supportedConfigurations": [
+                    "K1"
+                ]
+            },
+            "T2": {
+                "supportedConfigurations": [
+                    "K1"
+                ]
+            },
+            "T3": {
+                "supportedConfigurations": [
+                    "K1",
+                    "K2"
+                ]
+            },
+            "T4": {
+                "supportedConfigurations": [
+                    "K2",
+                    "K1"
+                ]
+            }
+        }
+    },
+    "operations": {
+        "count": 6,
+        "items": {
+            "O1": {
+                "estimatedTestTime": {
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 16.96297360792256,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K1"
+                ]
+            },
+            "O2": {
+                "estimatedTestTime": {
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 33.828048573953275,
+                        "std": 0.0
+                    },
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 15.584368665503558,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K1",
+                    "K2"
+                ]
+            },
+            "O3": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 13.3741936114825,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2"
+                ]
+            },
+            "O4": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 38.01172565464002,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2"
+                ]
+            },
+            "O5": {
+                "estimatedTestTime": {
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 30.07242398935083,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K1"
+                ]
+            },
+            "O6": {
+                "estimatedTestTime": {
+                    "K2": {
+                        "distribution": "normal",
+                        "mean": 38.46210533515963,
+                        "std": 0.0
+                    },
+                    "K1": {
+                        "distribution": "normal",
+                        "mean": 49.182139012487525,
+                        "std": 0.0
+                    }
+                },
+                "compatibleConfigurations": [
+                    "K2",
+                    "K1"
+                ]
+            }
+        }
+    },
+    "products": {
+        "count": 2,
+        "items": {
+            "P1": {
+                "index": 0,
+                "arrival": 0,
+                "quantity": 2,
+                "duedate": 65.11400358664058,
+                "operations": [
+                    "O1",
+                    "O4",
+                    "O3"
+                ],
+                "dependencies": [
+                    [
+                        1,
+                        0
+                    ],
+                    [
+                        2,
+                        1
+                    ]
+                ]
+            },
+            "P2": {
+                "index": 1,
+                "arrival": 8.922417604432267,
+                "quantity": 1,
+                "duedate": 100.99731513673659,
+                "operations": [
+                    "O2",
+                    "O6",
+                    "O3",
+                    "O1",
+                    "O4"
+                ],
+                "dependencies": [
+                    [
+                        3,
+                        0
+                    ],
+                    [
+                        3,
+                        1
+                    ],
+                    [
+                        4,
+                        2
+                    ],
+                    [
+                        4,
+                        3
+                    ]
+                ]
+            }
+        }
+    }
+}
