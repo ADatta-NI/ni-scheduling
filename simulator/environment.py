@@ -206,7 +206,8 @@ class SchedulingEnv(MultiAgentEnv):
         # variance of test times 
         # tightness of the cap for the resources 
         # arrival time 
-        # 
+        # get the job names from here
+        # best would be to assign to jobname and then collect
         
         # Update operation and job progress/completion
         for testerName, testerDetails in self.testers.items():
