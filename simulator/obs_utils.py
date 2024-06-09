@@ -4,6 +4,7 @@ import random
 from typing import Tuple
 import math
 import scipy
+import momepy
 
 from constants import OperationStatus, JobStatus, SCHEDULING_ENV_RANDOM_SEED
 
@@ -496,3 +497,17 @@ def compute_overall_tardiness(jobs, products) -> float:
         due_date = products[jobDetails['productName']]['duedate']
         tardiness += max(0, completion_time - due_date)
     return tardiness
+def compute_graph_features(graph) -> Tuple:
+    """Computes the overall features of graphs of operation dependency ."""
+    cyclomatic_complexity = momepy.cyclomatic(graph, radius=None, name='cyclomatic',
+                                              distance=None, verbose=True)
+    meshedness = momepy.meshedness(graph, radius=None, name='meshedness',
+                                   distance=None, verbose=True)
+    node_edge_ratio = momepy.edge_node_ratio(graph, radius=None, name='edge_node_ratio',
+                                             distance=None, verbose=True)
+    gamma_connectivity  = momepy.gamma(graph, radius=None, name='gamma',
+                                       distance=None, verbose=True)
+
+    return cyclomatic_complexity, meshedness, node_edge_ratio, gamma_connectivity
+
+
