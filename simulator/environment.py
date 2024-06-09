@@ -208,6 +208,11 @@ class SchedulingEnv(MultiAgentEnv):
         # arrival time 
         # get the job names from here
         # best would be to assign to jobname and then collect
+        # cyclomatic complexity
+        # meshedness
+        # node edge ratio
+        # gamma connectivity
+        # hyperparameters
         
         # Update operation and job progress/completion
         for testerName, testerDetails in self.testers.items():
@@ -746,12 +751,13 @@ class SchedulingEnv(MultiAgentEnv):
             # Creating jobs, operations
             for jobNum in range(productDetails['quantity']):
                 jobName = productName + HYPHEN + str(jobNum)
+                # Define the important features here
                 self.products[productName]['jobs'].append(jobName)
                 self.jobs[jobName] = {
                     # Static
                     'productName': productName,
                     'operations': [],
-                    
+
                     # Dynamic
                     'status': JobStatus.NOT_STARTED,
                     'estimatedRemainingTime': "",

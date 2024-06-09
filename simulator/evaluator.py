@@ -28,16 +28,6 @@ from statistics import mean
 # Filter unnecessary warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-ModelCatalog.register_custom_model("custom_softmax_model", FullyConnectedSoftmaxNetwork)
-
-print("Model registered successfully")
-
-ModelCatalog.register_custom_action_dist("dirichlet_dist", TorchDirichlet)
-
-print("Distribution registered successfully")
-
-
-
 def compute_overall_tardiness(jobs, products,staticConfigurationFilePath,plot) -> float:
     """Computes the sum tardiness across all jobs.
 
@@ -73,6 +63,8 @@ def compute_overall_tardiness(jobs, products,staticConfigurationFilePath,plot) -
     print('Difference percentage variance:', variance_diff)
     print('Tardiness percentage mean:', mean_tardiness_diff)
     print('Tardiness percentage median:', median_tardiness_diff)
+
+    print(len(percent_tardiness))
 
     #print("difference array", percent_diff)
 
