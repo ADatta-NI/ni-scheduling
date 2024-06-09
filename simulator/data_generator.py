@@ -3,7 +3,7 @@ import json
 import networkx as nx
 import numpy as np
 from constants import DATA_GENERATOR_TRAIN_SEED, DATA_GENERATOR_TEST_SEED 
-
+import obs_utils
 # add job setup time here so that it can be collected later 
 # visualise all possible time related variables 
 # cyclomatic complexity of the dependency trees
@@ -78,8 +78,12 @@ class DataGenerator:
             edgePercent = random.uniform(self.config.get('minProductEdgesPercent'), self.config.get('maxProductEdgesPercent'))
             selectedOps = random.sample(ops, numOps)
 
-            nodes, edges = self._generate_random_connected_dag(numOps, edgePercent)
+            G, nodes, edges = self._generate_random_connected_dag(numOps, edgePercent)
 
+            ## add code for collecting graph features
+
+            cyclomatic_complexity, meshedness, node_edge_ratio, gamma_connectivity = compute_graph_features(G)
+            
             self.data['products']['items'][productName]['operations'] = selectedOps
             self.data['products']['items'][productName]['dependencies'] = edges
             self.data['products']['items'][productName]['arrival'] = arrival
@@ -330,7 +334,7 @@ class DataGenerator:
         nodes = list(G.nodes)
         edges = list(G.edges)
         ## add nodes and edges to a dataset for analysis 
-        return nodes, edges
+        return nodes, edges, G
 
 
 if __name__ == "__main__":
