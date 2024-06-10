@@ -42,7 +42,7 @@ class DataGenerator:
         # Generate products
         self._generate_products()
 
-        filePath = self.dirPath + 'static_configuration_' + str(idx) + '.json'
+        filePath = self.dirPath + 'eda_analysis' + str(idx) + '.json'
         with open(filePath, 'w') as f:
             json.dump(self.data, f)
 
@@ -65,7 +65,8 @@ class DataGenerator:
                     'quantity': random.randint(self.config.get('minQuantity'), self.config.get('maxQuantity')),
                     'duedate': '',
                     'operations': '',
-                    'dependencies': []
+                    'dependencies': [],
+                    'features': [],
                 } for index in range(self.numOfProducts)
             }
         }
@@ -78,17 +79,17 @@ class DataGenerator:
             edgePercent = random.uniform(self.config.get('minProductEdgesPercent'), self.config.get('maxProductEdgesPercent'))
             selectedOps = random.sample(ops, numOps)
 
-            G, nodes, edges = self._generate_random_connected_dag(numOps, edgePercent)
+            nodes, edges, G = self._generate_random_connected_dag(numOps, edgePercent)
 
             ## add code for collecting graph features
 
-            cyclomatic_complexity, meshedness, node_edge_ratio, gamma_connectivity = compute_graph_features(G)
+            cyclomatic_complexity, meshedness, node_edge_ratio, gamma_connectivity = obs_utils.compute_graph_features(G)
             
             self.data['products']['items'][productName]['operations'] = selectedOps
             self.data['products']['items'][productName]['dependencies'] = edges
             self.data['products']['items'][productName]['arrival'] = arrival
             self.data['products']['items'][productName]['duedate'] = self._compute_due_date_for_product(productName)
-            
+            self.data['products']['items'][productName]['features'] = gamma_connectivity
             
             arrival += random.uniform(self.config.get('minArrivalTimeGap'), self.config.get('maxArrivalTimeGap'))
 
@@ -341,7 +342,7 @@ if __name__ == "__main__":
     config = {
         'dirPath': 'data/',
         'purpose': 'train',
-        'numOfStaticConfigurationFiles': 100,
+        'numOfStaticConfigurationFiles': 1,
 
         # The number of configurations/modes available in the system (across all testers)
         'minConfigurations': 2,

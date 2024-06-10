@@ -16,19 +16,50 @@ from environment import SchedulingEnv
 import matplotlib.pyplot as plt
 from statistics import mean, median, variance
 
-
-
-#rom environment_corr import SchedulingEnv
+# rom environment_corr import SchedulingEnv
 from constants import (
     MS_AGENT
 )
 import json
 import ray
 from statistics import mean
+
 # Filter unnecessary warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-def compute_overall_tardiness(jobs, products,staticConfigurationFilePath,plot) -> float:
+ModelCatalog.register_custom_model("custom_softmax_model", FullyConnectedSoftmaxNetwork)
+
+print("Model registered successfully")
+
+ModelCatalog.register_custom_action_dist("dirichlet_dist", TorchDirichlet)
+
+print("Distribution registered successfully")
+
+
+def compute_overall_tardiness_per_product(jobs, products) -> dict:
+    """Computes the sum tardiness across all products and return
+    the tuple of tardiness
+
+    For computing tardiness of a job,
+    - we look at last finished operation and subtract the due-date from it.
+    - if completion time is earlier than due-date, tardiness is zero.
+    """
+    tardiness_dict = {}
+    for product in products.keys():
+        tardiness = 0
+        for jobName, jobDetails in jobs.items():
+            if not (jobDetails['productName'] == product):
+                continue
+            else:
+                completion_time = jobDetails['completionTime']
+                due_date = products[jobDetails['productName']]['duedate']
+                # print(f'{product}:', max(0, completion_time - due_date))
+                tardiness += max(0, completion_time - due_date)
+        tardiness_dict[product] = tardiness
+    return tardiness_dict
+
+
+def compute_overall_tardiness(jobs, products, staticConfigurationFilePath, plot) -> float:
     """Computes the sum tardiness across all jobs.
 
     For computing tardiness of a job,
@@ -40,17 +71,11 @@ def compute_overall_tardiness(jobs, products,staticConfigurationFilePath,plot) -
     percent_diff = []
     percent_tardiness = []
     for jobName, jobDetails in jobs.items():
-        # print(jobDetails)
-        # TODO
-        # collect everything from here with the tardiness to analyse performance
-        # study the datatype of the jobDetails and number of features here
-        # correlation analysis of the jobDetails part 
-        # learning trends of each agent w.r.t priority
-        # priority as due date 
+        print(f"{jobDetails}")
         completion_time = jobDetails['completionTime']
         due_date = products[jobDetails['productName']]['duedate']
-        percent_diff.append(((completion_time - due_date)*100)/due_date)
-        percent_tardiness.append(((max(0, completion_time - due_date))*100)/due_date)
+        percent_diff.append(((completion_time - due_date) * 100) / due_date)
+        percent_tardiness.append(((max(0, completion_time - due_date)) * 100) / due_date)
         tardiness += max(0, completion_time - due_date)
         # tardiness_array.append(max(0, completion_time - due_date))
     mean_percent_diff = mean(percent_diff)
@@ -64,19 +89,19 @@ def compute_overall_tardiness(jobs, products,staticConfigurationFilePath,plot) -
     print('Tardiness percentage mean:', mean_tardiness_diff)
     print('Tardiness percentage median:', median_tardiness_diff)
 
-    print(len(percent_tardiness))
-
-    #print("difference array", percent_diff)
+    # print("difference array", percent_diff)
+    print('products:', f"{products.keys()}")
+    print('length of tardiness array', len(percent_tardiness))
 
     if plot:
-       plt.hist(percent_diff, bins = 'auto', color='cyan', edgecolor='black')
-       plt.xlabel('Difference Percentages')
-       plt.ylabel('job count')
-       plt.savefig(staticConfigurationFilePath.split('.')[0]+'.png')
-       plt.close()
-    
+        plt.hist(percent_diff, bins=10, color='lightgreen', edgecolor='black')
+        plt.xlabel('Difference Percentages')
+        plt.ylabel('job count')
+        plt.savefig(staticConfigurationFilePath.split('.')[0] + '.png')
+        plt.close()
 
     return tardiness
+
 
 def parse_arguments(argv: Optional[Sequence[str]] = None) -> dict:
     """Defines cmd args for this program and parses the provided arg values and returns them.
@@ -87,7 +112,7 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> dict:
     ## Arg: env static configuration filepath
     parser.add_argument(
         '-scf', '--static-config-filepath',
-        default= 'data/constrained_resources_mediumstatic_configuration_16.json',
+        default='data/constrained_resources_mediumstatic_configuration_16.json',
         help='Specify the static configuration file path using which environment should be simulated.'
     )
 
@@ -107,10 +132,11 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> dict:
     # Parse and return argument values
     return parser.parse_args(argv)
 
+
 if __name__ == '__main__':
     # Parse CMD Arguments
     ray.init(num_cpus=64,
-             num_gpus = 4,
+             num_gpus=4,
              ignore_reinit_error=True,
              _system_config={
                  "object_spilling_config": json.dumps(
@@ -159,7 +185,7 @@ if __name__ == '__main__':
                 actions_dict[agentName] = a
             else:
                 a = evaluator.compute_osagent_action(obs)
-                #print("OS_Agent action: ", a)
+                # print("OS_Agent action: ", a)
                 actions_dict[agentName] = a
 
         # Step the environment
@@ -195,14 +221,14 @@ if __name__ == '__main__':
             print("Sum of OSAgent rewards for", osagent, "is: ", sum(osagent_rewards[osagent]))
         for opName, opDetails in operations.items():
             print("opname", opName)
-            #print(opDetails['completionTime'])
-            #print(opDetails['duedate'])
-            #collect due date for priority and collect completion time for performance 
-            if opDetails['completionTime'] > opDetails['duedate']:
+            # print(opDetails['completionTime'])
+            # print(opDetails['duedate'])
+            # if opDetails['completionTime'] > opDetails['duedate']:
 
-                print(opName, opDetails['completionTime'], opDetails['duedate'])
-        print("Cumulative Tardiness: ", compute_overall_tardiness(jobs, products, args.static_config_filepath,True))
-        
+            # print(opName, opDetails['completionTime'], opDetails['duedate'])
+        print("Cumulative Tardiness: ", compute_overall_tardiness(jobs, products, args.static_config_filepath, True))
+        tardiness_dict = compute_overall_tardiness_per_product(jobs, products)
+        print(f'{tardiness_dict}')
     else:
         print("Truncated!!!")
     ray.shutdown()
