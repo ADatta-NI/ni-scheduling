@@ -84,8 +84,8 @@ policies = {
             rollout_fragment_length = 16,
             model={
                 "fcnet_hiddens": [64, 64],
-                "custom_model": "custom_softmax_model",
-                "custom_action_dist": "dirichlet_dist",
+                # "custom_model": "custom_softmax_model",
+                # "custom_action_dist": "dirichlet_dist",
                 "free_log_std": False,
             },
             explore=True),
@@ -99,8 +99,8 @@ policies = {
             rollout_fragment_length = 16,
             model={
                 "fcnet_hiddens": [64, 64],
-                "custom_model": "custom_softmax_model",
-                "custom_action_dist": "dirichlet_dist",
+                # "custom_model": "custom_softmax_model",
+                # "custom_action_dist": "dirichlet_dist",
                 "free_log_std": False,
             },
             explore=True),
