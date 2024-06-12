@@ -66,7 +66,14 @@ class DataGenerator:
                     'duedate': '',
                     'operations': '',
                     'dependencies': [],
-                    'features': [],
+                    'complexity': [],
+                    'meshedness': [],
+                    'node_edge_ratio': [],
+                    'gamma_connectivity': [],
+                    'edge_density': [],
+                    'max_weight': [],
+                    'min_weight': [],
+
                 } for index in range(self.numOfProducts)
             }
         }
@@ -89,8 +96,15 @@ class DataGenerator:
             self.data['products']['items'][productName]['dependencies'] = edges
             self.data['products']['items'][productName]['arrival'] = arrival
             self.data['products']['items'][productName]['duedate'] = self._compute_due_date_for_product(productName)
-            self.data['products']['items'][productName]['features'] = gamma_connectivity
-            
+            self.data['products']['items'][productName]['gamma_connectivity'] = gamma_connectivity
+            self.data['products']['items'][productName]['complexity'] = float(cyclomatic_complexity)
+            self.data['products']['items'][productName]['meshedness'] = meshedness
+            self.data['products']['items'][productName]['node_edge_ratio'] = node_edge_ratio
+            self.data['products']['items'][productName]['edge_density'] = edgePercent
+            self.data['products']['items'][productName]['max_weight'] = self._find_most_weighted_path_in_the_graph(G, productName)
+            self.data['products']['items'][productName]['min_weight'] = self._find_least_weighted_path_in_the_graph(G, productName)
+
+
             arrival += random.uniform(self.config.get('minArrivalTimeGap'), self.config.get('maxArrivalTimeGap'))
 
 
@@ -174,6 +188,40 @@ class DataGenerator:
             G.add_edge(target, -2)
 
         weightest_path = max((path for path in nx.all_simple_paths(G, -1, -2)), key=lambda path: self._find_weight_of_path(path, productName))
+
+        # Remove added dummy nodes and corresponding edges
+        for source in sources:
+            G.remove_edge(-1, source)
+        for target in targets:
+            G.remove_edge(target, -2)
+        G.remove_node(-1)
+        G.remove_node(-2)
+
+        return self._find_weight_of_path(weightest_path, productName)
+
+    def _find_least_weighted_path_in_the_graph(self, G, productName):
+        ''' Finds the most weighted path from added source (-1) to added sink (-2) in the provided product graph.
+
+        - Here weight refers to the setup plus test time of the path.
+        '''
+
+        sources = [x for x in G.nodes() if G.in_degree(x) == 0]
+        targets = [x for x in G.nodes() if G.out_degree(x) == 0]
+
+        # Added dummy source (-1) and dummy sink (-2).
+        G.add_node(-1)
+        G.add_node(-2)
+
+        # Add edges between dummy source to all original sources
+        for source in sources:
+            G.add_edge(-1, source)
+
+        # Add edges from all original targets to dummy sink
+        for target in targets:
+            G.add_edge(target, -2)
+
+        weightest_path = min((path for path in nx.all_simple_paths(G, -1, -2)),
+                             key=lambda path: self._find_weight_of_path(path, productName))
 
         # Remove added dummy nodes and corresponding edges
         for source in sources:

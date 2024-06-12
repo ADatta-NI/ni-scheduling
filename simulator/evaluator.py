@@ -1,5 +1,7 @@
 import argparse
-from typing import Optional
+import os
+import csv
+from typing import Optional, Tuple, Dict, Any
 from typing import Sequence
 import matplotlib.pyplot as plt
 import statistics
@@ -27,16 +29,81 @@ from statistics import mean
 # Filter unnecessary warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-ModelCatalog.register_custom_model("custom_softmax_model", FullyConnectedSoftmaxNetwork)
 
-print("Model registered successfully")
+def create_feature_space(jobs, products, staticConfigurationFilePath):
+    with open(staticConfigurationFilePath, 'r') as file:
+        data = json.load(file)
 
-ModelCatalog.register_custom_action_dist("dirichlet_dist", TorchDirichlet)
+    # Extract tardiness per product of given file
+    tardiness_mean_dict, tardiness_median_dict = compute_overall_tardiness_per_product(jobs, products)
 
-print("Distribution registered successfully")
+    # Extract the products, operations, and testers
+    products = data['products']['items']
+    operations = data['operations']['items']
+    testers = data['testers']['items']
+
+    # Prepare data for CSV
+    csv_data = []
+    for product_id, product_info in products.items():
+        row = {
+            'Arrival': product_info['arrival'],
+            'Quantity': product_info['quantity'],
+            'Due Date': product_info['duedate'],
+            'Cyclomatic Complexity' : product_info['complexity'],
+            'Meshedness': product_info['meshedness'],
+            'Node Edge Ratio': product_info['node_edge_ratio'],
+            'Gamma Connectivity': product_info['gamma_connectivity'],
+            'Edge Density': product_info['edge_density'],
+            'Max weight': product_info['max_weight'],
+            'Min weight': product_info['min_weight'],
+
+        }
+
+        # Calculate the total number of compatible configurations for all operations
+
+        for operation_id in product_info['operations']:
+            operation_info = operations[operation_id]
+            compatible_configurations = set()
+            for config in operation_info['compatibleConfigurations']:
+                compatible_configurations.add(config)
+                total_compatible_configurations = len(compatible_configurations)
+        row['Total Compatible Configurations'] = total_compatible_configurations
+        # print(compatible_configurations)
+
+        # Calculate the total number of testers for each product
+        total_testers = 0
+        for tester_id, tester_info in testers.items():
+            if any(config in tester_info['supportedConfigurations'] for config in compatible_configurations):
+                total_testers += 1
+        row['Total Testers'] = total_testers
+
+        ## adding the final column
+        row['Mean Tardiness'] = tardiness_mean_dict[product_id]
+        row['Median Tardiness'] = tardiness_median_dict[product_id]
+
+        csv_data.append(row)
+
+    directory = 'analysis_files'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        print(f"Directory '{directory}' created.")
+    else:
+        print(f"Directory '{directory}' already exists.")
+    # Write data to CSV
+    with open('analysis_files/' +
+              'file_1' + '.csv',
+              'w', newline='') as csvfile:
+        fieldnames = list(csv_data[0].keys())
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for row in csv_data:
+            writer.writerow(row)
+
+    print("CSV file has been created successfully.")
 
 
-def compute_overall_tardiness_per_product(jobs, products) -> dict:
+def compute_overall_tardiness_per_product(jobs, products) -> tuple[dict[Any, int], dict[Any, int]]:
     """Computes the sum tardiness across all products and return
     the tuple of tardiness
 
@@ -44,9 +111,10 @@ def compute_overall_tardiness_per_product(jobs, products) -> dict:
     - we look at last finished operation and subtract the due-date from it.
     - if completion time is earlier than due-date, tardiness is zero.
     """
-    tardiness_dict = {}
+    tardiness_mean_dict = {}
+    tardiness_median_dict = {}
     for product in products.keys():
-        tardiness = 0
+        tardiness_list = []
         for jobName, jobDetails in jobs.items():
             if not (jobDetails['productName'] == product):
                 continue
@@ -54,9 +122,12 @@ def compute_overall_tardiness_per_product(jobs, products) -> dict:
                 completion_time = jobDetails['completionTime']
                 due_date = products[jobDetails['productName']]['duedate']
                 # print(f'{product}:', max(0, completion_time - due_date))
-                tardiness += max(0, completion_time - due_date)
-        tardiness_dict[product] = tardiness
-    return tardiness_dict
+                tardiness_list.append(max(0, completion_time - due_date))
+        mean_tardiness = mean(tardiness_list)
+        median_tardiness = median(tardiness_list)
+        tardiness_mean_dict[product] = mean_tardiness
+        tardiness_median_dict[product] = median_tardiness
+    return tardiness_mean_dict, tardiness_median_dict
 
 
 def compute_overall_tardiness(jobs, products, staticConfigurationFilePath, plot) -> float:
@@ -112,7 +183,7 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> dict:
     ## Arg: env static configuration filepath
     parser.add_argument(
         '-scf', '--static-config-filepath',
-        default='data/constrained_resources_mediumstatic_configuration_16.json',
+        default='/data/adatta14/PycharmProjects/ni-scheduling/simulator/data/eda_analysis1.json',
         help='Specify the static configuration file path using which environment should be simulated.'
     )
 
@@ -229,6 +300,7 @@ if __name__ == '__main__':
         print("Cumulative Tardiness: ", compute_overall_tardiness(jobs, products, args.static_config_filepath, True))
         tardiness_dict = compute_overall_tardiness_per_product(jobs, products)
         print(f'{tardiness_dict}')
+        create_feature_space(jobs, products,args.static_config_filepath)
     else:
         print("Truncated!!!")
     ray.shutdown()
