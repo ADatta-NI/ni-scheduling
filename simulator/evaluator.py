@@ -49,7 +49,7 @@ def create_feature_space(jobs, products, staticConfigurationFilePath):
             'Arrival': product_info['arrival'],
             'Quantity': product_info['quantity'],
             'Due Date': product_info['duedate'],
-            'Cyclomatic Complexity' : product_info['complexity'],
+            'Cyclomatic Complexity': product_info['complexity'],
             'Meshedness': product_info['meshedness'],
             'Node Edge Ratio': product_info['node_edge_ratio'],
             'Gamma Connectivity': product_info['gamma_connectivity'],
@@ -83,15 +83,28 @@ def create_feature_space(jobs, products, staticConfigurationFilePath):
 
         csv_data.append(row)
 
+    # Create directory
     directory = 'analysis_files'
     if not os.path.exists(directory):
         os.makedirs(directory)
         print(f"Directory '{directory}' created.")
     else:
         print(f"Directory '{directory}' already exists.")
+
     # Write data to CSV
+    # Full file path
+    file_path = staticConfigurationFilePath
+
+    # Extract the base name (file name with extension)
+    base_name = os.path.basename(file_path)
+
+    # Extract the file name without the extension
+    file_name = os.path.splitext(base_name)[0]
+
+    print(file_name)
+
     with open('analysis_files/' +
-              'file_1' + '.csv',
+              file_name + '.csv',
               'w', newline='') as csvfile:
         fieldnames = list(csv_data[0].keys())
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -183,7 +196,7 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> dict:
     ## Arg: env static configuration filepath
     parser.add_argument(
         '-scf', '--static-config-filepath',
-        default='/data/adatta14/PycharmProjects/ni-scheduling/simulator/data/eda_analysis1.json',
+        default='/data/adatta14/PycharmProjects/ni-scheduling/simulator/data/eda_analysis7.json',
         help='Specify the static configuration file path using which environment should be simulated.'
     )
 
@@ -300,7 +313,7 @@ if __name__ == '__main__':
         print("Cumulative Tardiness: ", compute_overall_tardiness(jobs, products, args.static_config_filepath, True))
         tardiness_dict = compute_overall_tardiness_per_product(jobs, products)
         print(f'{tardiness_dict}')
-        create_feature_space(jobs, products,args.static_config_filepath)
+        create_feature_space(jobs, products, args.static_config_filepath)
     else:
         print("Truncated!!!")
     ray.shutdown()
