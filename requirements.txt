@@ -103,6 +103,7 @@ rpds-py==0.8.8
 rsa==4.9
 scikit-image==0.21.0
 scipy==1.11.1
+seaborn
 six==1.16.0
 smart-open==6.3.0
 sympy==1.12

@@ -390,7 +390,7 @@ if __name__ == "__main__":
     config = {
         'dirPath': 'data/',
         'purpose': 'train',
-        'numOfStaticConfigurationFiles': 1,
+        'numOfStaticConfigurationFiles': 100,
 
         # The number of configurations/modes available in the system (across all testers)
         'minConfigurations': 2,
