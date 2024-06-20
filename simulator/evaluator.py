@@ -1,6 +1,8 @@
 import argparse
 import os
+import time
 import csv
+from argparse import Namespace
 from typing import Optional, Tuple, Dict, Any
 from typing import Sequence
 import matplotlib.pyplot as plt
@@ -13,7 +15,7 @@ import os
 from custom_models import FullyConnectedSoftmaxNetwork
 from custom_action_dist import TorchDirichlet
 from ray.rllib.models import ModelCatalog
-from policy_evaluation import PolicyEvaluation
+from policy_evaluation import PolicyEvaluation, PolicyScalableEvaluation
 from environment import SchedulingEnv
 import matplotlib.pyplot as plt
 from statistics import mean, median, variance
@@ -84,7 +86,7 @@ def create_feature_space(jobs, products, staticConfigurationFilePath):
         csv_data.append(row)
 
     # Create directory
-    directory = 'analysis_files'
+    directory = 'impala_analysis_files'
     if not os.path.exists(directory):
         os.makedirs(directory)
         print(f"Directory '{directory}' created.")
@@ -103,7 +105,7 @@ def create_feature_space(jobs, products, staticConfigurationFilePath):
 
     print(file_name)
 
-    with open('analysis_files/' +
+    with open('impala_analysis_files/' +
               file_name + '.csv',
               'w', newline='') as csvfile:
         fieldnames = list(csv_data[0].keys())
@@ -196,7 +198,7 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> dict:
     ## Arg: env static configuration filepath
     parser.add_argument(
         '-scf', '--static-config-filepath',
-        default='/data/adatta14/PycharmProjects/ni-scheduling/simulator/data/eda_analysis7.json',
+        default='/data/adatta14/PycharmProjects/ni-scheduling/simulator/data/eda_analysis20.json',
         help='Specify the static configuration file path using which environment should be simulated.'
     )
 
@@ -212,23 +214,18 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> dict:
         action='store_true',
         help='Specify whether a random policy should be used for evaluation.'
     )
-
+    ## Arg: algorithm
+    parser.add_argument(
+        '-a', '--algorithm', '--algo',
+        default='impala',
+        choices=('ppo', 'sac', 'impala'),
+        help='Specify the algorithm using which the policies have to be learned. (Default: %(default)s)'
+    )
     # Parse and return argument values
     return parser.parse_args(argv)
 
 
 if __name__ == '__main__':
-    # Parse CMD Arguments
-    ray.init(num_cpus=64,
-             num_gpus=4,
-             ignore_reinit_error=True,
-             _system_config={
-                 "object_spilling_config": json.dumps(
-                     {"type": "filesystem",
-                      "params": {"directory_path": '/data/adatta14/PycharmProjects'}},
-                 )
-             },
-             )
     args = parse_arguments()
 
     print(args)
@@ -237,6 +234,7 @@ if __name__ == '__main__':
     maxSteps = None
 
     # Instantiate the scheduling environment
+    inference_config = {"num_workers": 2}
     config = {
         "staticConfigurationFilePath": args.static_config_filepath,
         "maxSteps": maxSteps,
@@ -249,8 +247,15 @@ if __name__ == '__main__':
     # Instantiate the evaluator
     checkpoint_path = args.checkpoint_filepath
     random_policy = args.random_policy
-    evaluator = PolicyEvaluation(env_config=config, checkpoint_path=checkpoint_path, random_policy=random_policy)
+    algorithm = args.algorithm
+    # evaluator = PolicyEvaluation(env_config=config, checkpoint_path=checkpoint_path, random_policy=random_policy)
 
+    evaluator = PolicyScalableEvaluation(env_config=config,
+                                         modify_config=inference_config,
+                                         checkpoint_path=checkpoint_path,
+                                         random_policy=random_policy)
+
+    start_time = time.time()
     # Get initial observation
     obs_dict, infos_dict = env.reset()
 
@@ -313,7 +318,10 @@ if __name__ == '__main__':
         print("Cumulative Tardiness: ", compute_overall_tardiness(jobs, products, args.static_config_filepath, True))
         tardiness_dict = compute_overall_tardiness_per_product(jobs, products)
         print(f'{tardiness_dict}')
-        create_feature_space(jobs, products, args.static_config_filepath)
+        # create_feature_space(jobs, products, args.static_config_filepath)
     else:
         print("Truncated!!!")
     ray.shutdown()
+    elapsed_time = time.time() - start_time
+    print('Time elapsed:', elapsed_time)
+    print(inference_config)

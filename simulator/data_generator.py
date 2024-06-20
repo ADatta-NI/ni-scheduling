@@ -42,7 +42,7 @@ class DataGenerator:
         # Generate products
         self._generate_products()
 
-        filePath = self.dirPath + 'eda_analysis' + str(idx) + '.json'
+        filePath = self.dirPath + 'eda_analysis_large' + str(idx) + '.json'
         with open(filePath, 'w') as f:
             json.dump(self.data, f)
 
@@ -390,27 +390,27 @@ if __name__ == "__main__":
     config = {
         'dirPath': 'data/',
         'purpose': 'train',
-        'numOfStaticConfigurationFiles': 100,
+        'numOfStaticConfigurationFiles': 20,
 
         # The number of configurations/modes available in the system (across all testers)
-        'minConfigurations': 2,
-        'maxConfigurations': 20 ,
+        'minConfigurations': 20,
+        'maxConfigurations': 100,
 
         # The setup time needed to change from one configuration/mode to another.
-        'minSetupTime': 0,
-        'maxSetupTime': 10,
+        'minSetupTime': 10,
+        'maxSetupTime': 100,
 
         # The number of testers in the system
-        'minTesters': 10,
-        'maxTesters': 40,
+        'minTesters': 5,
+        'maxTesters': 10,
 
         # The number of configurations/modes per tester
         'minSupportedConfigurationsPerTester': 2,
         'maxSupportedConfigurationsPerTester': 20,
 
         # The number of unique operations/tests that can be performed in the system (across all configurations)
-        'minOperations': 100,
-        'maxOperations': 200,
+        'minOperations': 20,
+        'maxOperations': 50,
 
         # The estimated avg test time of an operation
         'minMeanEstimatedTestTime': 2,
@@ -422,20 +422,20 @@ if __name__ == "__main__":
 
         # Context: An operation/test can be performed using different configurations.
         # The number of configurations which can support an operation
-        'minSupportedConfigurationsPerOperation': 5,
-        'maxSupportedConfigurationsPerOperation': 15,
+        'minSupportedConfigurationsPerOperation': 10,
+        'maxSupportedConfigurationsPerOperation': 20,
 
         # The number of products to be considered for the schedule (unique test entities / product graphs)
-        'minProducts': 2,
-        'maxProducts': 10,
+        'minProducts': 10,
+        'maxProducts': 20,
 
         # The number of items of each product which are requested for testing.
-        'minQuantity': 5,
-        'maxQuantity': 20,
+        'minQuantity': 20,
+        'maxQuantity': 50,
 
         # The number of test operations/nodes needed to complete testing of a product
-        'minNumOperationsPerProduct': 5,
-        'maxNumOperationsPerProduct': 15,
+        'minNumOperationsPerProduct': 10,
+        'maxNumOperationsPerProduct': 20,
 
         # The arrival time distribution of the products (how frequently does the new products arrive)
         'minArrivalTimeGap': 50,

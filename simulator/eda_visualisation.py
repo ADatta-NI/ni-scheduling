@@ -16,10 +16,10 @@ def combine_all_csv_files(dirPath, initialPath, initial_file):
         # Check if combined_output.csv exists
         if os.path.exists(initialPath):
             with open(initialPath, 'r', newline='') as combined_file:
-                combined_reader = csv.reader(combined_file)
-                featureHeader = next(combined_reader)
+                main_file = csv.reader(combined_file)
+                featureHeader = next(main_file)
                 total_rows.append(featureHeader)
-                total_rows.extend(row for row in combined_reader)
+                total_rows.extend(row for row in main_file)
 
         # List all CSV files and get their paths, excluding combined_output.csv
         csv_files = [os.path.join(dirPath, file) for file in os.listdir(dirPath) if
@@ -59,14 +59,14 @@ def combine_all_csv_files(dirPath, initialPath, initial_file):
                         next(row_data)
                     total_rows.extend(row for row in row_data)
 
-        directory = 'analysis_files'
+        directory = 'impala_analysis_files'
         if not os.path.exists(directory):
             os.makedirs(directory)
             print(f"Directory '{directory}' created.")
         else:
             print(f"Directory '{directory}' already exists.")
 
-        combined_csv_path = 'analysis_files/combined_output.csv'
+        combined_csv_path = 'impala_analysis_files/combined_output.csv'
         with open(combined_csv_path, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerows(total_rows)
@@ -74,7 +74,7 @@ def combine_all_csv_files(dirPath, initialPath, initial_file):
         print("All CSV files have been combined into 'combined_output.csv'")
 
 
-def correlation_and_pair_plot(combined_file_path):
+def pair_plot(combined_file_path,dirPath):
     df = pd.read_csv(combined_file_path)
     # Get the name of the last column
     mean_column = df.columns[-2]
@@ -91,19 +91,36 @@ def correlation_and_pair_plot(combined_file_path):
     sns.pairplot(df_pairplot_mean, y_vars=mean_column,
                  x_vars=df_pairplot_mean.columns.difference([mean_column, median_column]))
     plt.show()
-    plt.savefig('analysis_files/pairplot_mean' + '.png')
+    plt.savefig(dirPath + '/pairplot_mean' + '.png')
     plt.close()
 
     sns.pairplot(df_pairplot_median, y_vars=median_column,
                  x_vars=df_pairplot_median.columns.difference([mean_column, median_column]))
     plt.show()
-    plt.savefig('analysis_files/pairplot_median' + '.png')
+    plt.savefig(dirPath + '/pairplot_median' + '.png')
     plt.close()
 
 
+def correlation_analysis(combinedFilePath):
+    df = pd.read_csv(combinedFilePath)
+    median_column = df.columns[-1]
+    mean_column = df.columns[-2]
+    correlation_with_mean = df.drop(columns=[median_column,mean_column]).corrwith(df[mean_column])
+    correlation_with_median = df.drop(columns=[mean_column, median_column]).corrwith(df[median_column])
+
+    print('correlation with median:\n',correlation_with_median.sort_values(ascending=False))
+    print('correlation with mean:\n',correlation_with_mean.sort_values(ascending=False))
+
+    return correlation_with_mean, correlation_with_median
+
+
 if __name__ == "__main__":
-    dirPath = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/analysis_files'
-    initialPath = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/analysis_files/combined_output.csv'
-    combine_all_csv_files(dirPath, initialPath, False)
-    combined_csv_path = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/analysis_files/combined_output.csv'
-    correlation_and_pair_plot(combined_csv_path)
+    combine_files = False
+    dirPath = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/impala_analysis_files'
+    initialPath = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/impala_analysis_files/combined_output.csv'
+    if combine_files:
+       combine_all_csv_files(dirPath, initialPath, True)
+       combined_csv_path = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/impala_analysis_files/combined_output.csv'
+       pair_plot(combined_csv_path,dirPath)
+    else:
+       correlation_analysis(initialPath)
