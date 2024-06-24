@@ -2,7 +2,19 @@ import random
 import json
 import networkx as nx
 import numpy as np
-from constants import DATA_GENERATOR_TRAIN_SEED, DATA_GENERATOR_TEST_SEED 
+from constants import DATA_GENERATOR_TRAIN_SEED, DATA_GENERATOR_TEST_SEED
+import obs_utils
+
+
+# add job setup time here so that it can be collected later
+# visualise all possible time related variables
+# cyclomatic complexity of the dependency trees
+# no of jobs count of job names
+# ratio of longest to shortest test times
+# variance of test times
+# tightness of the cap for the resources
+# arrival time
+# both measure and record
 class DataGenerator:
     def __init__(self, config=None):
         self.config = config or {}
@@ -14,10 +26,9 @@ class DataGenerator:
         self._num_of_static_configuration_files = self.config.get('numOfStaticConfigurationFiles')
         for idx in range(self._num_of_static_configuration_files):
             self._generate_and_save_single_config(idx + 1)
-        
 
     def _generate_and_save_single_config(self, idx):
-        # Initialize data 
+        # Initialize data
         self.data = {}
 
         # Generate configurations
@@ -30,64 +41,103 @@ class DataGenerator:
         self._generate_operations()
 
         # Generate products
-        self._generate_products()
+        self._generate_products(percentage=0.2)
 
-        filePath = self.dirPath + 'static_configuration_' + str(idx) + '.json'
+        filePath = self.dirPath + 'eda_analysis_priority' + str(idx) + '.json'
         with open(filePath, 'w') as f:
             json.dump(self.data, f)
 
-
-    def _generate_products(self):
-        ''' Generates the products section of data.
+    def _generate_products(self, percentage=0.2):
+        """ Generates the products section of data.
 
         - The number of products should be in the range ['minProducts', 'maxProducts'].
         - The number of operations for a product should be in the range ['minNumOperationsPerProduct', 'maxNumOperationsPerProduct'], if numOfOperations is less than min or max of operationsPerProduct, then numOfOperations should be considered.
         - The number of edges in each product graph should be tried to be fit in this percentage range ['minProductEdgesPercent', 'maxProductEdgesPercent'], where percentage is with respect to a complete graph.
-        '''
+        """
         self.numOfProducts = random.randint(self.config.get('minProducts'), self.config.get('maxProducts'))
 
         self.data['products'] = {
             'count': self.numOfProducts,
             'items': {
-                'P' + str(index + 1) : {
+                'P' + str(index + 1): {
                     'index': index,
                     'arrival': '',
                     'quantity': random.randint(self.config.get('minQuantity'), self.config.get('maxQuantity')),
                     'duedate': '',
                     'operations': '',
-                    'dependencies': []
+                    'dependencies': [],
+                    'complexity': [],
+                    'meshedness': [],
+                    'node_edge_ratio': [],
+                    'gamma_connectivity': [],
+                    'edge_density': [],
+                    'max_weight': [],
+                    'min_weight': [],
+                    'priority': [],
+
                 } for index in range(self.numOfProducts)
             }
         }
+        # Initialising priority products
+        product_keys_to_assign_priority = self._assign_priority(percentage)
 
         # Generating product graphs and computing due dates
         ops = list(self.data['operations']['items'].keys())
         arrival = 0
         for productName in self.data['products']['items'].keys():
-            numOps = random.randint(min(self.numOfOperations, self.config.get('minNumOperationsPerProduct')), min(self.numOfOperations, self.config.get('maxNumOperationsPerProduct')))
-            edgePercent = random.uniform(self.config.get('minProductEdgesPercent'), self.config.get('maxProductEdgesPercent'))
+
+            numOps = random.randint(min(self.numOfOperations, self.config.get('minNumOperationsPerProduct')),
+                                    min(self.numOfOperations, self.config.get('maxNumOperationsPerProduct')))
+            edgePercent = random.uniform(self.config.get('minProductEdgesPercent'),
+                                         self.config.get('maxProductEdgesPercent'))
             selectedOps = random.sample(ops, numOps)
 
-            nodes, edges = self._generate_random_connected_dag(numOps, edgePercent)
+            nodes, edges, G = self._generate_random_connected_dag(numOps, edgePercent)
+
+            # add code for collecting graph features
+
+            cyclomatic_complexity, meshedness, node_edge_ratio, gamma_connectivity = obs_utils.compute_graph_features(G)
 
             self.data['products']['items'][productName]['operations'] = selectedOps
             self.data['products']['items'][productName]['dependencies'] = edges
             self.data['products']['items'][productName]['arrival'] = arrival
             self.data['products']['items'][productName]['duedate'] = self._compute_due_date_for_product(productName)
-            
-            
+            self.data['products']['items'][productName]['gamma_connectivity'] = gamma_connectivity
+            self.data['products']['items'][productName]['complexity'] = float(cyclomatic_complexity)
+            self.data['products']['items'][productName]['meshedness'] = meshedness
+            self.data['products']['items'][productName]['node_edge_ratio'] = node_edge_ratio
+            self.data['products']['items'][productName]['edge_density'] = edgePercent
+            self.data['products']['items'][productName]['max_weight'] = self._find_most_weighted_path_in_the_graph(G,
+                                                                                                                   productName)
+            self.data['products']['items'][productName]['min_weight'] = self._find_least_weighted_path_in_the_graph(G,
+                                                                                                                    productName)
             arrival += random.uniform(self.config.get('minArrivalTimeGap'), self.config.get('maxArrivalTimeGap'))
 
+            if productName in product_keys_to_assign_priority:
+                self.data['products']['items'][productName]['priority'] = 1
+            else:
+                self.data['products']['items'][productName]['priority'] = 0
 
-    def _compute_due_date_for_product(self, productName, strictness_weight=0.9):
-        ''' Computes the due date for a product.
+    def _assign_priority(self, percentage=0.2):
+        """ Assign 1 as a sign of high priority products
+        Randomly shuffle product keys and store them in a list
+        Assign priority while generating products and their dependency graphs
+        """
+        product_keys_num = len(self.data['products']['items'].keys())
+        product_keys_num_assign = int(percentage * product_keys_num)
+        product_keys = list(self.data['products']['items'].keys())
+        product_keys_to_assign_priority = set(random.sample(product_keys, product_keys_num_assign))
+        return product_keys_to_assign_priority
 
-        - Since we currently assume parallel processing of operations, this method currently approximates the test time of the graph to be 
+    def _compute_due_date_for_product(self, productName, strictness_weight=1.0):
+        """ Computes the due date for a product.
+
+        - Since we currently assume parallel processing of operations, this method currently approximates the test time of the graph to be
         the test time of the heaviest path in the DAG.
         - Here, the heaviest path refers to the path having maximum setup plus test time.
-        - Multiplies with the quantity and adds arrival time for an approximate optimistic due date. 
+        - Multiplies with the quantity and adds arrival time for an approximate optimistic due date.
         - Multiply by a weight that controls the strictness of the duedate (less weight => stricter duedate)
-        '''
+        """
         # Compute Heaviest Path
         edge_list = [(u, v) for [u, v] in self.data['products']['items'][productName]['dependencies']]
         G = nx.from_edgelist(edge_list, create_using=nx.DiGraph)
@@ -110,11 +160,11 @@ class DataGenerator:
 
         # Approx. due date
         due_date = self.data['products']['items'][productName]['arrival']
-        quantity_per_tester = self.data['products']['items'][productName]['quantity'] / self.data['testers']['count'] 
+        quantity_per_tester = self.data['products']['items'][productName]['quantity'] / self.data['testers']['count']
         due_date += processing_time * (1 if quantity_per_tester < 1 else quantity_per_tester)
 
         return due_date * strictness_weight
-    
+
     def _find_weight_of_path(self, path, productName):
         ''' For the given path from added source (-1) to added sink (-2), we compute the sum of setup plus test time of all the modes except source and sink
         '''
@@ -133,20 +183,19 @@ class DataGenerator:
             test_time = test_time / len(opDetails['compatibleConfigurations'])
             setup_time = setup_time / len(opDetails['compatibleConfigurations'])
             weight += (test_time + setup_time)
-
+        # record the weights in a dataset
         return weight
-
 
     def _find_most_weighted_path_in_the_graph(self, G, productName):
         ''' Finds the most weighted path from added source (-1) to added sink (-2) in the provided product graph.
 
         - Here weight refers to the setup plus test time of the path.
         '''
-        
-        sources = [x for x in G.nodes() if G.in_degree(x)==0]
-        targets = [x for x in G.nodes() if G.out_degree(x)==0]
 
-        # Added dummy source (-1) and dummy sink (-2). 
+        sources = [x for x in G.nodes() if G.in_degree(x) == 0]
+        targets = [x for x in G.nodes() if G.out_degree(x) == 0]
+
+        # Added dummy source (-1) and dummy sink (-2).
         G.add_node(-1)
         G.add_node(-2)
 
@@ -158,7 +207,8 @@ class DataGenerator:
         for target in targets:
             G.add_edge(target, -2)
 
-        weightest_path = max((path for path in nx.all_simple_paths(G, -1, -2)), key=lambda path: self._find_weight_of_path(path, productName))
+        weightest_path = max((path for path in nx.all_simple_paths(G, -1, -2)),
+                             key=lambda path: self._find_weight_of_path(path, productName))
 
         # Remove added dummy nodes and corresponding edges
         for source in sources:
@@ -170,10 +220,43 @@ class DataGenerator:
 
         return self._find_weight_of_path(weightest_path, productName)
 
+    def _find_least_weighted_path_in_the_graph(self, G, productName):
+        ''' Finds the most weighted path from added source (-1) to added sink (-2) in the provided product graph.
+
+        - Here weight refers to the setup plus test time of the path.
+        '''
+
+        sources = [x for x in G.nodes() if G.in_degree(x) == 0]
+        targets = [x for x in G.nodes() if G.out_degree(x) == 0]
+
+        # Added dummy source (-1) and dummy sink (-2).
+        G.add_node(-1)
+        G.add_node(-2)
+
+        # Add edges between dummy source to all original sources
+        for source in sources:
+            G.add_edge(-1, source)
+
+        # Add edges from all original targets to dummy sink
+        for target in targets:
+            G.add_edge(target, -2)
+
+        weightest_path = min((path for path in nx.all_simple_paths(G, -1, -2)),
+                             key=lambda path: self._find_weight_of_path(path, productName))
+
+        # Remove added dummy nodes and corresponding edges
+        for source in sources:
+            G.remove_edge(-1, source)
+        for target in targets:
+            G.remove_edge(target, -2)
+        G.remove_node(-1)
+        G.remove_node(-2)
+
+        return self._find_weight_of_path(weightest_path, productName)
 
     def _generate_operations(self):
         ''' Generates the operations section of data.
-        
+
         - The number of operations should be in the range ['minOperations', 'maxOperations'].
         - The distribution of estimatedTestTime is assumed to be 'normal'
         - The mean of estimatedTestTime distribution should be in the range ['minMeanEstimatedTestTime', 'maxMeanEstimatedTestTime']
@@ -183,15 +266,18 @@ class DataGenerator:
         '''
         self.numOfOperations = random.randint(self.config.get('minOperations'), self.config.get('maxOperations'))
 
-        minSupportedConfigurationsPerOperation = min(self.config.get('minSupportedConfigurationsPerOperation'), self.numOfConfigs)
-        maxSupportedConfigurationsPerOperation = min(self.config.get('maxSupportedConfigurationsPerOperation'), self.numOfConfigs)
+        minSupportedConfigurationsPerOperation = min(self.config.get('minSupportedConfigurationsPerOperation'),
+                                                     self.numOfConfigs)
+        maxSupportedConfigurationsPerOperation = min(self.config.get('maxSupportedConfigurationsPerOperation'),
+                                                     self.numOfConfigs)
         self.data['operations'] = {
             'count': self.numOfOperations,
             'items': {
-                'O' + str(index + 1) : {
+                'O' + str(index + 1): {
                     'estimatedTestTime': {},
                     'compatibleConfigurations': [
-                        'K' + str(config + 1) for config in random.sample(range(self.numOfConfigs), random.randint(minSupportedConfigurationsPerOperation, maxSupportedConfigurationsPerOperation))
+                        'K' + str(config + 1) for config in random.sample(range(self.numOfConfigs), random.randint(
+                            minSupportedConfigurationsPerOperation, maxSupportedConfigurationsPerOperation))
                     ]
                 } for index in range(self.numOfOperations)
             }
@@ -210,32 +296,33 @@ class DataGenerator:
                     'std': random.uniform(minStdEstimatedTestTime, maxStdEstimatedTestTime)
                 }
 
-
     def _generate_testers(self):
         ''' Generates the testers section of data.
 
         - The number of testers should be in the range ['minTesters', 'maxTesters'].
         - The tester names are prefixed with 'T', followed by the random index assigned to it + 1.
-        - The number of supported configurations for a tester should be in the range ['minSupportedConfigurationsPerTester', 'maxSupportedConfigurationsPerTester'], 
+        - The number of supported configurations for a tester should be in the range ['minSupportedConfigurationsPerTester', 'maxSupportedConfigurationsPerTester'],
             if numOfConfigs is less than min or max supported configurations per tester, numOfConfigs should be used.
         '''
         self.numOfTesters = random.randint(self.config.get('minTesters'), self.config.get('maxTesters'))
 
-        minSupportedConfigurationsPerTester = min(self.config.get('minSupportedConfigurationsPerTester'), self.numOfConfigs)
-        maxSupportedConfigurationsPerTester = min(self.config.get('maxSupportedConfigurationsPerTester'), self.numOfConfigs)
+        minSupportedConfigurationsPerTester = min(self.config.get('minSupportedConfigurationsPerTester'),
+                                                  self.numOfConfigs)
+        maxSupportedConfigurationsPerTester = min(self.config.get('maxSupportedConfigurationsPerTester'),
+                                                  self.numOfConfigs)
         self.data['testers'] = {
             'count': self.numOfTesters,
             'items': {
-                'T' + str(index + 1) : {
+                'T' + str(index + 1): {
                     'supportedConfigurations': [
-                        'K' + str(config + 1) for config in random.sample(range(self.numOfConfigs), random.randint(minSupportedConfigurationsPerTester, maxSupportedConfigurationsPerTester))
-                    ] 
+                        'K' + str(config + 1) for config in random.sample(range(self.numOfConfigs), random.randint(
+                            minSupportedConfigurationsPerTester, maxSupportedConfigurationsPerTester))
+                    ]
                 } for index in range(self.numOfTesters)
             }
         }
 
         self._verify_and_add_unassigned_configurations()
-    
 
     def _verify_and_add_unassigned_configurations(self):
         ''' This checks if any configuration is left unassigned to any tester and adds it to a randomly selected tester.
@@ -252,7 +339,6 @@ class DataGenerator:
                 tester = random.choice(list(self.data['testers']['items'].keys()))
                 self.data['testers']['items'][tester]['supportedConfigurations'].append(config)
 
-
     def _generate_configurations(self):
         ''' Generates the configurations section of data.
 
@@ -266,13 +352,12 @@ class DataGenerator:
         self.data['configurations'] = {
             'count': self.numOfConfigs,
             'items': {
-                'K' + str(index + 1) : {
+                'K' + str(index + 1): {
                     'index': index,
                     'setupTimes': self._generate_setup_times(index)
                 } for index in range(self.numOfConfigs)
             }
         }
-
 
     def _generate_setup_times(self, index):
         ''' Generates the setup times for a particular configuration.
@@ -287,7 +372,6 @@ class DataGenerator:
         setupTimes[index] = 0
 
         return setupTimes
-    
 
     def _generate_random_connected_dag(self, numOfNodes, percentOfEdges):
         ''' Generates a random connected directed acyclic graph containing 'numOfNodes' number of nodes and possibly 'percentOfEdges' percent of total possible edges.
@@ -301,7 +385,7 @@ class DataGenerator:
         G = nx.from_numpy_array(adj_mat, create_using=nx.DiGraph)
 
         totalNumOfEdges = (numOfNodes * (numOfNodes - 1)) / 2
-        edgesThreshold = percentOfEdges * totalNumOfEdges 
+        edgesThreshold = percentOfEdges * totalNumOfEdges
         triesThreshold = totalNumOfEdges
         numOfTries = 0
 
@@ -312,15 +396,15 @@ class DataGenerator:
 
             G.remove_edge(random_edge[0], random_edge[1])
 
-            if not(nx.is_weakly_connected(G) and nx.is_directed_acyclic_graph(G)):
+            if not (nx.is_weakly_connected(G) and nx.is_directed_acyclic_graph(G)):
                 G.add_edge(random_edge[0], random_edge[1])
 
             numOfTries += 1
 
         nodes = list(G.nodes)
         edges = list(G.edges)
-
-        return nodes, edges
+        ## add nodes and edges to a dataset for analysis
+        return nodes, edges, G
 
 
 if __name__ == "__main__":
@@ -331,7 +415,7 @@ if __name__ == "__main__":
 
         # The number of configurations/modes available in the system (across all testers)
         'minConfigurations': 2,
-        'maxConfigurations': 20 ,
+        'maxConfigurations': 20,
 
         # The setup time needed to change from one configuration/mode to another.
         'minSetupTime': 0,

@@ -3,6 +3,16 @@ import json
 import networkx as nx
 import numpy as np
 from constants import DATA_GENERATOR_TRAIN_SEED, DATA_GENERATOR_TEST_SEED 
+import obs_utils
+# add job setup time here so that it can be collected later 
+# visualise all possible time related variables 
+# cyclomatic complexity of the dependency trees
+# no of jobs count of job names 
+# ratio of longest to shortest test times 
+# variance of test times 
+# tightness of the cap for the resources 
+# arrival time 
+# both measure and record 
 class DataGenerator:
     def __init__(self, config=None):
         self.config = config or {}
@@ -32,7 +42,7 @@ class DataGenerator:
         # Generate products
         self._generate_products()
 
-        filePath = self.dirPath + 'static_configuration_' + str(idx) + '.json'
+        filePath = self.dirPath + 'eda_analysis_large' + str(idx) + '.json'
         with open(filePath, 'w') as f:
             json.dump(self.data, f)
 
@@ -55,7 +65,15 @@ class DataGenerator:
                     'quantity': random.randint(self.config.get('minQuantity'), self.config.get('maxQuantity')),
                     'duedate': '',
                     'operations': '',
-                    'dependencies': []
+                    'dependencies': [],
+                    'complexity': [],
+                    'meshedness': [],
+                    'node_edge_ratio': [],
+                    'gamma_connectivity': [],
+                    'edge_density': [],
+                    'max_weight': [],
+                    'min_weight': [],
+
                 } for index in range(self.numOfProducts)
             }
         }
@@ -68,14 +86,25 @@ class DataGenerator:
             edgePercent = random.uniform(self.config.get('minProductEdgesPercent'), self.config.get('maxProductEdgesPercent'))
             selectedOps = random.sample(ops, numOps)
 
-            nodes, edges = self._generate_random_connected_dag(numOps, edgePercent)
+            nodes, edges, G = self._generate_random_connected_dag(numOps, edgePercent)
 
+            ## add code for collecting graph features
+
+            cyclomatic_complexity, meshedness, node_edge_ratio, gamma_connectivity = obs_utils.compute_graph_features(G)
+            
             self.data['products']['items'][productName]['operations'] = selectedOps
             self.data['products']['items'][productName]['dependencies'] = edges
             self.data['products']['items'][productName]['arrival'] = arrival
             self.data['products']['items'][productName]['duedate'] = self._compute_due_date_for_product(productName)
-            
-            
+            self.data['products']['items'][productName]['gamma_connectivity'] = gamma_connectivity
+            self.data['products']['items'][productName]['complexity'] = float(cyclomatic_complexity)
+            self.data['products']['items'][productName]['meshedness'] = meshedness
+            self.data['products']['items'][productName]['node_edge_ratio'] = node_edge_ratio
+            self.data['products']['items'][productName]['edge_density'] = edgePercent
+            self.data['products']['items'][productName]['max_weight'] = self._find_most_weighted_path_in_the_graph(G, productName)
+            self.data['products']['items'][productName]['min_weight'] = self._find_least_weighted_path_in_the_graph(G, productName)
+
+
             arrival += random.uniform(self.config.get('minArrivalTimeGap'), self.config.get('maxArrivalTimeGap'))
 
 
@@ -133,7 +162,7 @@ class DataGenerator:
             test_time = test_time / len(opDetails['compatibleConfigurations'])
             setup_time = setup_time / len(opDetails['compatibleConfigurations'])
             weight += (test_time + setup_time)
-
+        # record the weights in a dataset
         return weight
 
 
@@ -159,6 +188,40 @@ class DataGenerator:
             G.add_edge(target, -2)
 
         weightest_path = max((path for path in nx.all_simple_paths(G, -1, -2)), key=lambda path: self._find_weight_of_path(path, productName))
+
+        # Remove added dummy nodes and corresponding edges
+        for source in sources:
+            G.remove_edge(-1, source)
+        for target in targets:
+            G.remove_edge(target, -2)
+        G.remove_node(-1)
+        G.remove_node(-2)
+
+        return self._find_weight_of_path(weightest_path, productName)
+
+    def _find_least_weighted_path_in_the_graph(self, G, productName):
+        ''' Finds the most weighted path from added source (-1) to added sink (-2) in the provided product graph.
+
+        - Here weight refers to the setup plus test time of the path.
+        '''
+
+        sources = [x for x in G.nodes() if G.in_degree(x) == 0]
+        targets = [x for x in G.nodes() if G.out_degree(x) == 0]
+
+        # Added dummy source (-1) and dummy sink (-2).
+        G.add_node(-1)
+        G.add_node(-2)
+
+        # Add edges between dummy source to all original sources
+        for source in sources:
+            G.add_edge(-1, source)
+
+        # Add edges from all original targets to dummy sink
+        for target in targets:
+            G.add_edge(target, -2)
+
+        weightest_path = min((path for path in nx.all_simple_paths(G, -1, -2)),
+                             key=lambda path: self._find_weight_of_path(path, productName))
 
         # Remove added dummy nodes and corresponding edges
         for source in sources:
@@ -319,8 +382,8 @@ class DataGenerator:
 
         nodes = list(G.nodes)
         edges = list(G.edges)
-
-        return nodes, edges
+        ## add nodes and edges to a dataset for analysis 
+        return nodes, edges, G
 
 
 if __name__ == "__main__":
@@ -331,7 +394,7 @@ if __name__ == "__main__":
 
         # The number of configurations/modes available in the system (across all testers)
         'minConfigurations': 2,
-        'maxConfigurations': 20 ,
+        'maxConfigurations': 20,
 
         # The setup time needed to change from one configuration/mode to another.
         'minSetupTime': 0,
@@ -391,6 +454,7 @@ if __name__ == "__main__":
         'maxProductEdgesPercent': 0.5,
 
     }
+
 
     datagen = DataGenerator(config)
     datagen.generate_and_save()
