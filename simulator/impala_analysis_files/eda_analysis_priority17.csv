@@ -1,0 +1,3 @@
+Arrival,Quantity,Due Date,Cyclomatic Complexity,Meshedness,Node Edge Ratio,Gamma Connectivity,Edge Density,Max weight,Min weight,Priority,Total Compatible Configurations,Total Testers,Mean Tardiness,Median Tardiness,priority completion
+0,10,1455.5801514578438,5.0,0.45454545454545453,1.5,0.6666666666666666,0.44958336260512916,1455.5801514578438,705.4021135172744,0,13,27,0,0.0,Not Applicable
+50.44703022278407,14,1830.6994173816925,22.0,0.88,2.4,0.9230769230769231,0.34602370593253723,1780.2523871589083,470.7822290942845,0,12,27,0,0.0,Not Applicable
