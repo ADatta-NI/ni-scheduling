@@ -44,8 +44,8 @@ def _get_static_config_data(config) -> dict:
 #Env creator string 
 
 env_config = {
-        "staticConfigurationFilePath": "data/static_configuration.json",
-        "maxSteps": maxSteps,
+        "staticConfigurationFilePath": "data/static_configuration_priority1.json",
+        "maxSteps": 1000,
         "setupRendering": render,
         "sampleRandomProblem": True,
     }
@@ -201,7 +201,6 @@ actions = ms_policy.compute_single_action(ms_obs)
 print(actions)
 num_of_iterations = 500
 
-
 print("===========TRAINING===========")
 for i in range(num_of_iterations):
     print(i)
@@ -217,9 +216,10 @@ for i in range(num_of_iterations):
     if MS_POLICY in results["policy_reward_mean"] and OS_POLICY in results['policy_reward_mean']:
        print(f"Iteration={algo.iteration}: R1={results['policy_reward_mean'][MS_POLICY]} R2={results['policy_reward_mean'][OS_POLICY]}")
 
-    if (algo.iteration) % 500 == 0 :
+    if (algo.iteration) % num_of_iterations == 0:
        print("Completed 500 iters")
-       filename = algo.save(checkpoint_dir = '/data/adatta14/PycharmProjects/ni-scheduling-project' + "checkpoint_ppo_mean_" + str(algo.iteration) + "/")
+       filename = algo.save(checkpoint_dir = '/data/adatta14/PycharmProjects/ni-scheduling-project' + "checkpoint_ppo_tardiness_priority_v6_" + str(algo.iteration) + "/")
        #print(f"checkpoint saved after iteration: {algo.iteration} at {filename}")
+
 print("=============DONE=============")
 ray.shutdown()

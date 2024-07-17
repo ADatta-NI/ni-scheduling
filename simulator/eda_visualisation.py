@@ -59,14 +59,14 @@ def combine_all_csv_files(dirPath, initialPath, initial_file):
                         next(row_data)
                     total_rows.extend(row for row in row_data)
 
-        directory = 'impala_analysis_files'
+        directory = 'sac_v1_analysis_files'
         if not os.path.exists(directory):
             os.makedirs(directory)
             print(f"Directory '{directory}' created.")
         else:
             print(f"Directory '{directory}' already exists.")
 
-        combined_csv_path = 'impala_analysis_files/combined_output.csv'
+        combined_csv_path = 'sac_v1_analysis_files/combined_output.csv'
         with open(combined_csv_path, mode='w', newline='') as file:
             writer = csv.writer(file)
             writer.writerows(total_rows)
@@ -116,11 +116,11 @@ def correlation_analysis(combinedFilePath):
 
 if __name__ == "__main__":
     combine_files = False
-    dirPath = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/impala_analysis_files'
-    initialPath = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/impala_analysis_files/combined_output.csv'
+    dirPath = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/sac_v1_analysis_files'
+    initialPath = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/sac_v1_analysis_files/combined_output.csv'
     if combine_files:
        combine_all_csv_files(dirPath, initialPath, True)
-       combined_csv_path = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/impala_analysis_files/combined_output.csv'
+       combined_csv_path = '/data/adatta14/PycharmProjects/ni-scheduling/simulator/sac_v1_analysis_files/combined_output.csv'
        pair_plot(combined_csv_path,dirPath)
     else:
        correlation_analysis(initialPath)

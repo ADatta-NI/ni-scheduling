@@ -178,7 +178,7 @@ for i in range(num_of_iterations):
     if (algo.iteration) % 500 == 0:
         print("Completed 5 more iters")
         filename = algo.save(
-            checkpoint_dir='/data/adatta14/PycharmProjects/ni-scheduling-project' + "checkpoint_impala_median_" + str(
+            checkpoint_dir='/data/adatta14/PycharmProjects/ni-scheduling-project' + "checkpoint_impala_tardiness_priority_v2_" + str(
                 algo.iteration) + "/")
         print(f"checkpoint saved after iteration: {algo.iteration} at {filename}")
 print("=============DONE=============")

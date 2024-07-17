@@ -24,6 +24,7 @@ class PolicyScalableEvaluation:
 
         inference_config = ref_algo.config.copy(copy_frozen=False)
         inference_config = inference_config.rollouts(num_rollout_workers=1)
+        inference_config = inference_config.resources(num_gpus_per_learner_worker=modify_config['num_gpus'])
         self.inference_algo = inference_config.build()
         self.inference_algo.restore(self.checkpoint_path)
 

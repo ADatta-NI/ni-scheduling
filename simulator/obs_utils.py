@@ -230,8 +230,21 @@ def collect_due_dates_of_bag(operations, bag):
     """
     due_dates = []
     for op in bag:
+
         due_dates.append(operations[op]['duedate'])
     return due_dates
+
+
+def collect_due_dates_of_bag_with_priority(data, operations, bag):
+    """Returns the due dates of operations in a bag
+    """
+    due_dates = []
+    for op in bag:
+        ref_product = operations[op]['productName']
+        priority = data['products']['items'][ref_product]['priority']
+        due_dates.append((1.0 - priority)*(operations[op]['duedate']))
+    return due_dates
+
 
 def compute_remaining_setup_plus_test_time_of_op(operations, opName, currentTime):
     """Returns remaining setup plus test time of the given operation
@@ -370,32 +383,32 @@ def compute_local_number_of_setups(data, operations, localBags) -> list:
         num_of_setups.append(compute_number_of_setups_of_bag(data, operations, bag, testerName))
     return get_descriptive_stats(num_of_setups, ['min', 'max', 'mean', 'std'])
 
-def compute_duedate_skewness_of_bag(operations, bag) -> float:
+def compute_duedate_skewness_of_bag(data, operations, bag) -> float:
     """Returns the skewness statistic of duedate distribution corresponding to all the operations in a bag
     """
-    due_dates = collect_due_dates_of_bag(operations, bag)
+    due_dates = collect_due_dates_of_bag_with_priority(data, operations, bag)
     return get_descriptive_stats(due_dates, ['skewness'])[0]
 
-def compute_local_duedate_skewness(operations, localBags) -> list:
+def compute_local_duedate_skewness(data, operations, localBags) -> list:
     """Returns the stats about skewness of due dates across all local bags 
     """
     skewness_values = []
     for bag in localBags.values():
-        skewness_values.append(compute_duedate_skewness_of_bag(operations, bag))
+        skewness_values.append(compute_duedate_skewness_of_bag(data, operations, bag))
     return get_descriptive_stats(skewness_values, ['min', 'max', 'mean', 'std'])
 
-def compute_duedate_kurtosis_of_bag(operations, bag):
+def compute_duedate_kurtosis_of_bag(data, operations, bag):
     """Returns the kurtosis statistic of duedate distribution corresponding to all the operations in a bag
     """
-    due_dates = collect_due_dates_of_bag(operations, bag)
+    due_dates = collect_due_dates_of_bag_with_priority(data, operations, bag)
     return get_descriptive_stats(due_dates, ['kurtosis'])[0]
 
-def compute_local_duedate_kurtosis(operations, localBags) -> list:
+def compute_local_duedate_kurtosis(data, operations, localBags) -> list:
     """Returns the stats about kurtosis of due dates across all local bags 
     """
     kurtosis_values = []
     for bag in localBags.values():
-        kurtosis_values.append(compute_duedate_kurtosis_of_bag(operations, bag))
+        kurtosis_values.append(compute_duedate_kurtosis_of_bag(data, operations, bag))
     return get_descriptive_stats(kurtosis_values, ['min', 'max', 'mean', 'std'])
 
 def compute_local_ratio_of_setup_to_test_time(data, operations, configurations, localBags) -> list:

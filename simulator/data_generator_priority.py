@@ -41,9 +41,9 @@ class DataGenerator:
         self._generate_operations()
 
         # Generate products
-        self._generate_products(percentage=0.2)
+        self._generate_products(percentage=0.5)
 
-        filePath = self.dirPath + 'eda_analysis_priority' + str(idx) + '.json'
+        filePath = self.dirPath + 'static_configuration_priority' + str(idx) + '.json'
         with open(filePath, 'w') as f:
             json.dump(self.data, f)
 
@@ -65,7 +65,6 @@ class DataGenerator:
                     'quantity': random.randint(self.config.get('minQuantity'), self.config.get('maxQuantity')),
                     'duedate': '',
                     'operations': '',
-                    'dependencies': [],
                     'complexity': [],
                     'meshedness': [],
                     'node_edge_ratio': [],
@@ -114,9 +113,9 @@ class DataGenerator:
             arrival += random.uniform(self.config.get('minArrivalTimeGap'), self.config.get('maxArrivalTimeGap'))
 
             if productName in product_keys_to_assign_priority:
-                self.data['products']['items'][productName]['priority'] = 1
+                self.data['products']['items'][productName]['priority'] = round(random.uniform(0.1,0.5),4)
             else:
-                self.data['products']['items'][productName]['priority'] = 0
+                self.data['products']['items'][productName]['priority'] = round(random.uniform(0.5,0.9),4)
 
     def _assign_priority(self, percentage=0.2):
         """ Assign 1 as a sign of high priority products
@@ -129,7 +128,7 @@ class DataGenerator:
         product_keys_to_assign_priority = set(random.sample(product_keys, product_keys_num_assign))
         return product_keys_to_assign_priority
 
-    def _compute_due_date_for_product(self, productName, strictness_weight=1.0):
+    def _compute_due_date_for_product(self, productName, strictness_weight=0.5):
         """ Computes the due date for a product.
 
         - Since we currently assume parallel processing of operations, this method currently approximates the test time of the graph to be
@@ -415,19 +414,19 @@ if __name__ == "__main__":
 
         # The number of configurations/modes available in the system (across all testers)
         'minConfigurations': 2,
-        'maxConfigurations': 20,
+        'maxConfigurations': 5,
 
         # The setup time needed to change from one configuration/mode to another.
-        'minSetupTime': 0,
-        'maxSetupTime': 10,
+        'minSetupTime': 10,
+        'maxSetupTime': 500,
 
         # The number of testers in the system
-        'minTesters': 10,
-        'maxTesters': 40,
+        'minTesters': 1,
+        'maxTesters': 5,
 
         # The number of configurations/modes per tester
         'minSupportedConfigurationsPerTester': 2,
-        'maxSupportedConfigurationsPerTester': 20,
+        'maxSupportedConfigurationsPerTester': 5,
 
         # The number of unique operations/tests that can be performed in the system (across all configurations)
         'minOperations': 100,
@@ -435,7 +434,7 @@ if __name__ == "__main__":
 
         # The estimated avg test time of an operation
         'minMeanEstimatedTestTime': 2,
-        'maxMeanEstimatedTestTime': 500,
+        'maxMeanEstimatedTestTime': 50,
 
         # The estimated avg standard deviation of test time of an operation
         'minStdEstimatedTestTime': 2,
@@ -443,8 +442,8 @@ if __name__ == "__main__":
 
         # Context: An operation/test can be performed using different configurations.
         # The number of configurations which can support an operation
-        'minSupportedConfigurationsPerOperation': 5,
-        'maxSupportedConfigurationsPerOperation': 15,
+        'minSupportedConfigurationsPerOperation': 2,
+        'maxSupportedConfigurationsPerOperation': 5,
 
         # The number of products to be considered for the schedule (unique test entities / product graphs)
         'minProducts': 2,
@@ -452,15 +451,15 @@ if __name__ == "__main__":
 
         # The number of items of each product which are requested for testing.
         'minQuantity': 5,
-        'maxQuantity': 20,
+        'maxQuantity': 10,
 
         # The number of test operations/nodes needed to complete testing of a product
         'minNumOperationsPerProduct': 5,
         'maxNumOperationsPerProduct': 15,
 
         # The arrival time distribution of the products (how frequently does the new products arrive)
-        'minArrivalTimeGap': 50,
-        'maxArrivalTimeGap': 100,
+        'minArrivalTimeGap': 1,
+        'maxArrivalTimeGap': 60,
 
         # Context: If there are n nodes, a complete graph contains n*(n-1)/2 nodes (less than that for it to be a DAG, but we'll consider this),
         # But in a product graph we won't have all possible dependencies.
@@ -471,8 +470,8 @@ if __name__ == "__main__":
         # (Here a dependency between ('a' and 'b') means 'b' can be performed only once 'a' is done)
         #
         # The number of edges percentage
-        'minProductEdgesPercent': 0.25,
-        'maxProductEdgesPercent': 0.5,
+        'minProductEdgesPercent': 0.5,
+        'maxProductEdgesPercent': 0.8,
 
     }
 

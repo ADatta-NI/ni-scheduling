@@ -85,17 +85,11 @@ def create_feature_space(jobs, products, staticConfigurationFilePath):
         row['Mean Tardiness'] = tardiness_mean_dict[product_id]
         row['Median Tardiness'] = tardiness_median_dict[product_id]
 
-        # Add the priority completion flag
-        if tardiness_mean_dict[product_id] > 0 and product_info['priority'] == 1:
-            row['priority completion'] = 'Not Completed'
-        elif tardiness_mean_dict[product_id] < 0 and product_info['priority'] == 1:
-            row['priority completion'] = 'Completed'
-        else:
-            row['priority completion'] = 'Not Applicable'
+
         csv_data.append(row)
 
     # Create directory
-    directory = 'impala_analysis_files'
+    directory = 'sac_v1_analysis_files'
     if not os.path.exists(directory):
         os.makedirs(directory)
         print(f"Directory '{directory}' created.")
@@ -114,7 +108,7 @@ def create_feature_space(jobs, products, staticConfigurationFilePath):
 
     print(file_name)
 
-    with open('impala_analysis_files/' +
+    with open('sac_v1_analysis_files/' +
               file_name + '.csv',
               'w', newline='') as csvfile:
         fieldnames = list(csv_data[0].keys())
@@ -207,7 +201,7 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> dict:
     ## Arg: env static configuration filepath
     parser.add_argument(
         '-scf', '--static-config-filepath',
-        default='/data/adatta14/PycharmProjects/ni-scheduling/simulator/data/eda_analysis_priority17.json',
+        default='/data/adatta14/PycharmProjects/ni-scheduling/simulator/data/eda_priority1.json',
         help='Specify the static configuration file path using which environment should be simulated.'
     )
 
@@ -329,7 +323,7 @@ if __name__ == '__main__':
         print("Cumulative Tardiness: ", compute_overall_tardiness(jobs, products, args.static_config_filepath, True))
         tardiness_dict, _ = compute_overall_tardiness_per_product(jobs, products)
         print(f'{tardiness_dict}')
-        create_feature_space(jobs, products, args.static_config_filepath)
+        # create_feature_space(jobs, products, args.static_config_filepath)
     else:
         print("Truncated!!!")
     ray.shutdown()
