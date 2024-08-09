@@ -7,9 +7,9 @@ Another branch with no modifications for manufacturing data will also be release
 ## Project Setup
 
 1. Install python version `3.11`
-2. Clone the repository
+2. Clone the repository with personalised access token pat
    ```
-   
+   git clone https://pat@github.com/ADatta-NI/ni-scheduling.git
    ```
 3. Enter the repo
    ```
