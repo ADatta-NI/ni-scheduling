@@ -55,6 +55,40 @@ def compute_opspecific_avg_setup_plus_test_time(data, jobs, operations, opName) 
         avg_setup_plus_test_times.append(avg_setup + avg_test_time)
     return np.average(avg_setup_plus_test_times)
 
+
+def compute_opspecific_avg_setup_plus_test_time_per_product(data, jobs, operations, opName) -> float:
+    """Returns the average setup plus test time of the given operation
+    """
+    jobName = operations[opName]['jobName']
+    productName = jobs[jobName]['productName']
+    opLogicalId = operations[opName]['logicalOperationId']
+    opType = data['products']['items'][productName]['operations'][opLogicalId]
+
+    avg_setup_times = []
+    avg_test_times = []
+    for config in data['operations']['items'][opType]['compatibleConfigurations'][productName]:
+        avg_setup = np.average(data['configurations']['items'][config]['setupTimes'])
+        # avg_test_time = average(data['operations']['items'][opType]['estimatedTestTime'][config])
+        avg_setup_times.append(avg_setup)
+    for product in data['operations']['items'][opType]['compatibleProducts']:
+        avg_test_time = average(data['operations']['items'][opType]['estimatedTestTime'][product])
+        avg_test_times.append(avg_test_time)
+    return np.average(avg_test_times) + np.average(avg_setup_times)
+
+## These are calculated from created operation dict so no need to change
+## move to inference and debug there
+
+def compute_estimated_remaining_test_time_of_operation(operations, opName, currentTime):
+    """Returns the remaining test time of a given operation
+    """
+    match operations[opName]['status']:
+        case OperationStatus.IN_PROGRESS:
+            return operations[opName]['startTime'] + operations[opName]['setupTime'] + operations[opName]['estimatedTestTime'] - currentTime
+        case OperationStatus.COMPLETED:
+            return 0
+        case _:
+            return operations[opName]['averageTestTime']
+
 def compute_opspecific_no_of_compatible_configurations(data, jobs, operations, opName) -> int:
     """Returns the number of compatible configurations for the given operation
     """
@@ -64,6 +98,14 @@ def compute_opspecific_no_of_compatible_configurations(data, jobs, operations, o
     opType = data['products']['items'][productName]['operations'][opLogicalId]
     return len(data['operations']['items'][opType]['compatibleConfigurations'])
     
+def compute_opspecific_no_of_compatible_configurations_per_product(data, jobs, operations, opName) -> int:
+    """Returns the number of compatible configurations for the given operation
+    """
+    jobName = operations[opName]['jobName']
+    productName = jobs[jobName]['productName']
+    opLogicalId = operations[opName]['logicalOperationId']
+    opType = data['products']['items'][productName]['operations'][opLogicalId]
+    return len(data['operations']['items'][opType]['compatibleConfigurations'][productName])
 
 def compute_opspecific_due_date_of_job(data, jobs, operations, opName) -> int:
     """Returns the due date of job corresponding to given operation
@@ -97,12 +139,38 @@ def compute_avg_operation_test_time(data, opType) -> float:
         test_times.append(test_time)
     return np.average(test_times)
 
+def compute_avg_operation_test_time_per_product(data, opType) -> float:
+    """Returns estimated test time of the given operation
+    """
+    test_times = []
+    print('operation', opType)
+    for product in data['operations']['items'][opType]['compatibleProducts']:
+        test_time = average(data['operations']['items'][opType]['estimatedTestTime'][product])
+        test_times.append(test_time)
+    return np.average(test_times)
+
 def compute_avg_operation_setup_time(data, configurations, opType) -> float:
     """Returns average setup time for the given operation
     """
     setup_times = []
     for config in data['operations']['items'][opType]['compatibleConfigurations']:
+        print(config)
         setup_times.append(configurations[config]['averageSetupTime'])
+    return np.average(setup_times)
+
+def compute_avg_operation_setup_time_per_product(data, configurations, opType) -> float:
+    """Returns average setup time for the given operation and product
+    """
+
+
+    setup_times = []
+    print('operation', opType)
+    for product in data['operations']['items'][opType]['compatibleProducts']:
+        config_list = data['operations']['items'][opType]['compatibleConfigurations'][product]
+        print(config_list)
+        for config in config_list:
+            print(config)
+            setup_times.append(configurations[config]['averageSetupTime'])
     return np.average(setup_times)
 
 def compute_estimated_operation_test_time_under_configuration(data, opType, config) -> float:
@@ -111,16 +179,14 @@ def compute_estimated_operation_test_time_under_configuration(data, opType, conf
     print(sample(data['operations']['items'][opType]['estimatedTestTime'][config]))
     return sample(data['operations']['items'][opType]['estimatedTestTime'][config])
 
-def compute_estimated_remaining_test_time_of_operation(operations, opName, currentTime):
-    """Returns the remaining test time of a given operation
+
+def compute_estimated_operation_test_time_under_product(data, opType, product) -> float:
+    """Returns the estimated test time under a given configuration for given operation
     """
-    match operations[opName]['status']:
-        case OperationStatus.IN_PROGRESS:
-            return operations[opName]['startTime'] + operations[opName]['setupTime'] + operations[opName]['estimatedTestTime'] - currentTime
-        case OperationStatus.COMPLETED:
-            return 0
-        case _:
-            return operations[opName]['averageTestTime']
+    print(sample(data['operations']['items'][opType]['estimatedTestTime'][product]))
+    return sample(data['operations']['items'][opType]['estimatedTestTime'][product])
+
+
 
 ##############################################################################################################################
 
@@ -213,10 +279,24 @@ def compute_global_setup_plus_test_times(operations, globalBag) -> list:
 
 def compute_global_number_of_compatible_configurations(data, operations, globalBag) -> list:
     """Returns the stats about number of compatible configurations of operations in the global bag.
+       TODO create a product based version
     """
     num_of_compat_configs = []
     for op in globalBag:
         num_of_compat_configs.append(len(data['operations']['items'][operations[op]['opType']]['compatibleConfigurations']))
+    return get_descriptive_stats(num_of_compat_configs, ['min', 'max', 'mean', 'std'])
+
+def compute_global_number_of_compatible_configurations_per_product(data, operations, jobs, globalBag) -> list:
+    """Returns the stats about number of compatible configurations of operations in the global bag.
+       TODO create a product based version
+    """
+    num_of_compat_configs = []
+    for op in globalBag:
+        print('operation in global bag', operations[op]['opType'])
+
+        # jobName = operations[op]['jobName']
+        productName = operations[op]['productName']
+        num_of_compat_configs.append(len(data['operations']['items'][operations[op]['opType']]['compatibleConfigurations'][productName]))
     return get_descriptive_stats(num_of_compat_configs, ['min', 'max', 'mean', 'std'])
 
 def compute_global_due_dates(operations, globalBag) -> list:
@@ -241,8 +321,9 @@ def collect_due_dates_of_bag_with_priority(data, operations, bag):
     due_dates = []
     for op in bag:
         ref_product = operations[op]['productName']
-        priority = data['products']['items'][ref_product]['priority']
-        due_dates.append((1.0 - priority)*(operations[op]['duedate']))
+        # priority = data['products']['items'][ref_product]['priority']
+
+        due_dates.append(operations[op]['duedate'])
     return due_dates
 
 
@@ -266,6 +347,16 @@ def compute_remaining_setup_plus_test_time_of_job(jobs, operations, jobName, cur
     return remaining_setup_plus_test_time
 
 def compute_remaining_test_times_of_jobs_corresponding_to_ops_in_bag(jobs, operations, bag, current_time) -> list:
+    """Returns the remaining test time values of jobs corresponding to operations in given bag"""
+    remaining_test_times = []
+    for jobName, jobDetails in jobs.items():
+        jobDetails['estimatedRemainingTime'] = compute_remaining_setup_plus_test_time_of_job(jobs, operations, jobName, current_time)
+    for op in bag:
+        jobName = operations[op]['jobName']
+        remaining_test_times.append(jobs[jobName]['estimatedRemainingTime'])
+    return remaining_test_times
+
+def compute_remaining_test_times_of_jobs_corresponding_to_prods_in_bag(jobs, operations, bag, current_time) -> list:
     """Returns the remaining test time values of jobs corresponding to operations in given bag"""
     remaining_test_times = []
     for jobName, jobDetails in jobs.items():
@@ -323,10 +414,48 @@ def get_total_setup_and_test_time_of_op_on_a_tester(data, operations, testers, c
     test_time = average(data['operations']['items'][operations[opName]['opType']]['estimatedTestTime'][best_config])
     return setup_time + test_time
 
-def get_total_setup_and_total_test_time_of_local_bag(data, operations, configurations, bag, testerName) -> Tuple[float, float]:
+def get_total_setup_and_test_time_of_op_on_a_tester_per_product(data, operations, jobs, testers, configurations, opName, productName, testerName) -> float:
+    """Returns setup plus test time of an operation on a tester.
+    """
+    # jobName = operations[opName]['jobName']
+    # productName = operations[opName]['productName']
+
+    best_config = compute_best_config_for_operation_on_a_tester_per_product(data, jobs, operations, opName, testerName)
+    setup_time = np.average(data['configurations']['items'][best_config]['setupTimes'])
+    test_time = average(data['operations']['items'][operations[opName]['opType']]['estimatedTestTime'][productName])
+    return setup_time + test_time
+
+
+## TODO  change the time extraction here and in all other inherited functions
+## create functions which take estimated times from the product confid
+## check if it has extracted time from each product
+## pass the product here
+
+
+def get_total_setup_and_total_test_time_of_local_bag(data, jobs, operations, configurations, bag) -> Tuple[float, float]:
     """Returns the total setup, total test time of a bag
 
-    For calculating the total setup and test times in a local bag, we assume that 
+    For calculating the total setup and test times in a local bag, we assume that
+    - we process every operation under it's most optimal configuration (optimal -> least test time)
+    - we switch configuration when we complete all the operations which are supposed to be tested under that configuration.
+    - Instead of estimating the ordering among available configs, we use avg setup times of each configuration as it's setup time
+    """
+
+    total_test_time = 0
+    configs = set()
+    for op in bag:
+        # best_config = compute_best_config_for_operation_on_a_tester_per_product(data, jobs, operations, op, testerName)
+        # configs.add(best_config)
+        jobName = operations[op]['jobName']
+        productName = jobs[jobName]['productName']
+        total_test_time += average(data['operations']['items'][operations[op]['opType']]['estimatedTestTime'][productName])
+    total_setup = sum([configurations[config]['averageSetupTime'] for config in configs])
+    return total_setup, total_test_time
+
+def get_total_setup_and_total_test_time_of_local_bag_product(data, jobs, operations, configurations, bag) -> Tuple[float, float]:
+    """Returns the total setup, total test time of a bag
+
+    For calculating the total setup and test times in a local bag, we assume that
     - we process every operation under it's most optimal configuration (optimal -> least test time)
     - we switch configuration when we complete all the operations which are supposed to be tested under that configuration.
     - Instead of estimating the ordering among available configs, we use avg setup times of each configuration as it's setup time
@@ -334,44 +463,57 @@ def get_total_setup_and_total_test_time_of_local_bag(data, operations, configura
     total_test_time = 0
     configs = set()
     for op in bag:
-        best_config = compute_best_config_for_operation_on_a_tester(data, operations, op, testerName)
-        configs.add(best_config)
-        total_test_time += average(data['operations']['items'][operations[op]['opType']]['estimatedTestTime'][best_config])
+        # best_config = compute_best_config_for_operation_on_a_tester(data, operations, op, testerName)
+        # configs.add(best_config)
+        ## extract it from the products in the new configuration file
+        jobName = operations[op]['jobName']
+        productName = jobs[jobName]['productName']
+        total_test_time += average(data['operations']['items'][operations[op]['opType']]['estimatedTestTime'][productName])
     total_setup = sum([configurations[config]['averageSetupTime'] for config in configs])
+
     return total_setup, total_test_time
 
-def compute_total_setup_plus_test_time_of_local_bag(data, operations, configurations, bag, testerName) -> float:
+
+
+def compute_total_setup_plus_test_time_of_local_bag(data, jobs, operations, configurations, bag) -> float:
     """Returns the total setup plus test time of a bag.
     """
-    total_setup, total_test_time = get_total_setup_and_total_test_time_of_local_bag(data, operations, configurations, bag, testerName)
-    return total_setup + total_test_time 
+    total_setup, total_test_time = get_total_setup_and_total_test_time_of_local_bag(data, jobs, operations, configurations, bag)
+    return total_setup + total_test_time
 
-    # total_setup_plus_test_time = 0
+def compute_total_setup_plus_test_time_of_local_bag_product(data, jobs, operations, configurations, bag, testerName) -> float:
+        """Returns the total setup plus test time of a bag.
+        """
+        total_setup, total_test_time = get_total_setup_and_total_test_time_of_local_bag_product(data, jobs, operations,
+                                                                                        configurations, bag)
+        return total_setup + total_test_time
+
+        # total_setup_plus_test_time = 0
     # for op in bag:
     #     avg_test_time = operations[op]['averageTestTime']
     #     avg_setup_time = operations[op]['averageSetupTime']
     #     total_setup_plus_test_time += (avg_setup_time + avg_test_time)
     # return total_setup_plus_test_time
 
-def compute_local_total_setup_plus_test_times(data, operations, configurations, localBags) -> list:
+def compute_local_total_setup_plus_test_times(data, jobs, operations, configurations, localBags) -> list:
     """Returns the stats about setup + test times of operations in the local bag
     """
     total_setup_plus_test_times = []
     for testerName, bag in localBags.items():
-        total_setup_plus_test_times.append(compute_total_setup_plus_test_time_of_local_bag(data, operations, configurations, bag, testerName))
+        total_setup_plus_test_times.append(compute_total_setup_plus_test_time_of_local_bag_product(data, jobs, operations, configurations, bag, testerName))
     return get_descriptive_stats(total_setup_plus_test_times, ['min', 'max', 'mean', 'std'])
 
 
-def compute_number_of_setups_of_bag(data, operations, bag, testerName) -> int:
+def compute_number_of_setups_of_bag(data, jobs, operations, bag, testerName) -> int:
     """Returns the minimum number of setups needed to complete all the operations in a bag when those operations are processed on their best available config 
     """
     configs = set()
     for op in bag:
-        best_config = compute_best_config_for_operation_on_a_tester(data, operations, op, testerName)
+        best_config = compute_best_config_for_operation_on_a_tester_per_product(data, jobs, operations, op, testerName)
         configs.add(best_config)
     return len(configs)
 
-def compute_local_number_of_setups(data, operations, localBags) -> list:
+def compute_local_number_of_setups(data, jobs, operations, localBags) -> list:
     """Returns the stats about estimated number of setups across all local queues
 
     For calculating the number of setups in a local bag, we assume that 
@@ -380,7 +522,7 @@ def compute_local_number_of_setups(data, operations, localBags) -> list:
     """
     num_of_setups = []
     for testerName, bag in localBags.items():
-        num_of_setups.append(compute_number_of_setups_of_bag(data, operations, bag, testerName))
+        num_of_setups.append(compute_number_of_setups_of_bag(data, jobs, operations, bag, testerName))
     return get_descriptive_stats(num_of_setups, ['min', 'max', 'mean', 'std'])
 
 def compute_duedate_skewness_of_bag(data, operations, bag) -> float:
@@ -411,7 +553,7 @@ def compute_local_duedate_kurtosis(data, operations, localBags) -> list:
         kurtosis_values.append(compute_duedate_kurtosis_of_bag(data, operations, bag))
     return get_descriptive_stats(kurtosis_values, ['min', 'max', 'mean', 'std'])
 
-def compute_local_ratio_of_setup_to_test_time(data, operations, configurations, localBags) -> list:
+def compute_local_ratio_of_setup_to_test_time(data, jobs, operations, configurations, localBags) -> list:
     """Returns the stats about ratio of total setup to total test times across all bags
 
     For calculating the total setup and test times in a local bag, we assume that 
@@ -421,7 +563,21 @@ def compute_local_ratio_of_setup_to_test_time(data, operations, configurations, 
     """
     ratios = []
     for testerName, bag in localBags.items():
-        total_setup, total_test_time = get_total_setup_and_total_test_time_of_local_bag(data, operations, configurations, bag, testerName)
+        total_setup, total_test_time = get_total_setup_and_total_test_time_of_local_bag_product(data, jobs, operations, configurations, bag)
+        ratios.append(0 if total_test_time == 0 else total_setup/total_test_time)
+    return get_descriptive_stats(ratios, ['min', 'max', 'mean', 'std'])
+
+def compute_local_ratio_of_setup_to_test_time_per_product(data, operations, jobs, configurations, localBags) -> list:
+    """Returns the stats about ratio of total setup to total test times across all bags
+
+    For calculating the total setup and test times in a local bag, we assume that
+    - we process every operation under it's most optimal configuration (optimal -> least test time)
+    - we switch configuration when we complete all the operations which are supposed to be tested under that configuration.
+    - Instead of estimating the ordering among available configs, we use avg setup times of each configuration as it's setup time
+    """
+    ratios = []
+    for testerName, bag in localBags.items():
+        total_setup, total_test_time = get_total_setup_and_total_test_time_of_local_bag_product(data, jobs, operations, configurations, bag)
         ratios.append(0 if total_test_time == 0 else total_setup/total_test_time)
     return get_descriptive_stats(ratios, ['min', 'max', 'mean', 'std'])
 
@@ -435,6 +591,21 @@ def compute_best_config_for_operation_on_a_tester(data, operations, operationNam
     return min(configs, key=lambda x: average(data['operations']['items'][opType]['estimatedTestTime'][x]))
     # return random.choice([key for (key, value) in configs.items() if average(value) == average(min_test_time_config)])
 
+def compute_best_config_for_operation_on_a_tester_per_product(data, jobs, operations, operationName, testerName) -> str:
+    """Returns the minimum test time config for a given operation. If there are multiple, returns one by choosing randomly.
+    """
+    # print('dict', operations.values())
+    opType = operations[operationName]['opType']
+    jobName = operations[operationName]['jobName']
+    productName = jobs[jobName]['productName']
+    compatible_configs = set(data['operations']['items'][opType]['compatibleConfigurations'][productName])
+    print('compatible_configurations', compatible_configs)
+    tester_configs = set(data['testers']['items'][testerName]['supportedConfigurations'])
+    print('tester_configurations', tester_configs)
+    configs = compatible_configs.intersection(tester_configs)
+    # min(configs, key=lambda x: average(data['operations']['items'][opType]['estimatedTestTime'][productName][x]))
+    return random.choice(tuple(configs))
+
 ##############################################################################################################################
 
 def compute_local_bag_num_of_ops(localBag) -> list:
@@ -442,10 +613,10 @@ def compute_local_bag_num_of_ops(localBag) -> list:
     """
     return [localBag.size()]
 
-def compute_local_bag_total_setup_plus_test_time(data, operations, configurations, localBag, testerName) -> list:
+def compute_local_bag_total_setup_plus_test_time(data, jobs, operations, configurations, localBag, testerName) -> list:
     """Returns the total setup plus test time of the local bag
     """
-    return [compute_total_setup_plus_test_time_of_local_bag(data, operations, configurations, localBag, testerName)]
+    return [compute_total_setup_plus_test_time_of_local_bag_product(data, jobs, operations, configurations, localBag, testerName)]
 
 def compute_local_bag_due_date(operations, localBag) -> list:
     """Returns the stats about due dates in a local bag
@@ -509,7 +680,8 @@ def compute_overall_tardiness(jobs, products) -> float:
         completion_time = jobDetails['completionTime']
         due_date = products[jobDetails['productName']]['duedate']
         tardiness += max(0, completion_time - due_date)
-    return tardiness
+    return
+
 def compute_graph_features(graph) -> Tuple:
     """Computes the overall features of graphs of operation dependency ."""
     cyclomatic_complexity = momepy.cyclomatic(graph, radius=None, name='cyclomatic',

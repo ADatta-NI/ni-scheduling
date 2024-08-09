@@ -16,7 +16,7 @@ from custom_models import FullyConnectedSoftmaxNetwork
 from custom_action_dist import TorchDirichlet
 from ray.rllib.models import ModelCatalog
 from policy_evaluation import PolicyEvaluation, PolicyScalableEvaluation
-from environment import SchedulingEnv
+from environment_real import SchedulingEnv
 import matplotlib.pyplot as plt
 from statistics import mean, median, variance
 
@@ -37,7 +37,7 @@ def create_feature_space(jobs, products, staticConfigurationFilePath):
         data = json.load(file)
 
     # Extract tardiness per product of given file
-    tardiness_mean_dict, tardiness_median_dict = compute_overall_tardiness_per_product(jobs, products)
+    # tardiness_mean_dict, tardiness_median_dict = compute_overall_tardiness_per_product(jobs, products)
 
     # Extract the products, operations, and testers
     products = data['products']['items']
@@ -81,8 +81,8 @@ def create_feature_space(jobs, products, staticConfigurationFilePath):
         row['Total Testers'] = total_testers
 
         ## adding the final column
-        row['Mean Tardiness'] = tardiness_mean_dict[product_id]
-        row['Median Tardiness'] = tardiness_median_dict[product_id]
+        # row['Mean Tardiness'] = tardiness_mean_dict[product_id]
+        # row['Median Tardiness'] = tardiness_median_dict[product_id]
 
         csv_data.append(row)
 
@@ -199,7 +199,7 @@ def parse_arguments(argv: Optional[Sequence[str]] = None) -> dict:
     ## Arg: env static configuration filepath
     parser.add_argument(
         '-scf', '--static-config-filepath',
-        default='/data/adatta14/PycharmProjects/ni-scheduling/simulator/data/eda_analysis5.json',
+        default='/home/aniruddha/ni-scheduling/simulator/data/backup/real_life_3.json',
         help='Specify the static configuration file path using which environment should be simulated.'
     )
 
@@ -318,13 +318,15 @@ if __name__ == '__main__':
             # if opDetails['completionTime'] > opDetails['duedate']:
 
             # print(opName, opDetails['completionTime'], opDetails['duedate'])
+
         print("Cumulative Tardiness: ", compute_overall_tardiness(jobs, products, args.static_config_filepath, True))
-        tardiness_dict, _ = compute_overall_tardiness_per_product(jobs, products)
-        print(f'{tardiness_dict}')
+        elapsed_time = time.time() - start_time
+        print('Time elapsed:', elapsed_time)
+        print(inference_config)
+        # tardiness_dict, _ = compute_overall_tardiness_per_product(jobs, products)
+        # print(f'{tardiness_dict}')
         # create_feature_space(jobs, products, args.static_config_filepath)
     else:
         print("Truncated!!!")
     ray.shutdown()
-    elapsed_time = time.time() - start_time
-    print('Time elapsed:', elapsed_time)
-    print(inference_config)
+

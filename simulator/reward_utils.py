@@ -61,10 +61,10 @@ def compute_msagent_reward_kurtosis_at_tester(operations, localbag) -> float:
     return obs_utils.compute_duedate_kurtosis_of_bag(operations, localbag)
 
 
-def compute_msagent_reward_total_setups_difference_at_tester(data, operations, localbags, prevStateAttributes,
+def compute_msagent_reward_total_setups_difference_at_tester(data, jobs, operations, localbags, prevStateAttributes,
                                                              testerName) -> float:
     before_setups = prevStateAttributes['setUps'][testerName]
-    after_setups = obs_utils.compute_number_of_setups_of_bag(data, operations, localbags[testerName], testerName)
+    after_setups = obs_utils.compute_number_of_setups_of_bag(data, jobs, operations, localbags[testerName], testerName)
     prevStateAttributes['setUps'][testerName] = after_setups
     return before_setups - after_setups
 
@@ -120,23 +120,29 @@ def compute_osagent_reward_tardiness_difference(data, jobs, operations, testers,
 
     current_tardiness = 0
     for opName, opDetails in operations.items():
+        print('operations', opName, type(opName))
         if opDetails['assignedTesterName'] == testerName:
             duedate = opDetails['duedate']
             completion_time = None
             if opDetails['status'] == OperationStatus.COMPLETED or opDetails['status'] == OperationStatus.IN_PROGRESS:
                 completion_time = opDetails['completionTime']
             elif opDetails['status'] == OperationStatus.IN_LOCAL_BAG:
-                completion_time = currentTime + obs_utils.get_total_setup_and_test_time_of_op_on_a_tester(data,
-                                                                                                          operations,
-                                                                                                          testers,
-                                                                                                          configurations,
-                                                                                                          opName,
-                                                                                                          testerName)
+                productName = opDetails['productName']
+                print('operation in local bag', opName)
+                completion_time = currentTime + obs_utils.get_total_setup_and_test_time_of_op_on_a_tester_per_product(data,
+                                                                                                                      operations,
+                                                                                                                      jobs,
+                                                                                                                      testers,
+                                                                                                                      configurations,
+                                                                                                                      opName,
+                                                                                                                      productName,
+                                                                                                                      testerName)
             # Extract priority from the products using Productname
             ref_product = opDetails['productName']
-            priority = data['products']['items'][ref_product]['priority']
-            print('priority:', priority)
+            # priority = data['products']['items'][ref_product]['priority']
+            # print('priority:', priority)
             # current_tardiness += max(0, completion_time - priority * duedate)
+            priority = 1.0
             current_tardiness += completion_time - priority * duedate
 
     prev_tardiness = prevStateAttributes['tardiness'][testerName]
@@ -179,7 +185,8 @@ def compute_osagent_reward_median_difference(data, jobs, operations, testers, co
 
             # Extract priority from the products using Productname
             ref_product = opDetails['productName']
-            priority = data['products']['items'][ref_product]['priority']
+            #priority = data['products']['items'][ref_product]['priority']
+            priority = 1.0
             current_tardiness.append(completion_time - priority * duedate)
             print('tardiness:', completion_time - priority * duedate)
 

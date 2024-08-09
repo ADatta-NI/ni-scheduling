@@ -110,15 +110,16 @@ def check_operation_tester_feasibility(data, jobs, operations, testers, configur
     - Tester has atleast one supported configuration which is compatible to test the operation.
     """
     opType = operations[opName]['opType']
-    op_config_set = set(data['operations']['items'][opType]['compatibleConfigurations'])
+    productName = operations[opName]['productName']
+    op_config_set = set(data['operations']['items'][opType]['compatibleConfigurations'][productName])
     tester_config_set = set(data['testers']['items'][testerName]['supportedConfigurations'])
     feasible_config_set = op_config_set.intersection(tester_config_set)
 
     # Check if operation have atleast one compatible configuration suitable on this tester
     if len(feasible_config_set) == 0:
         return False
-    
-    return True
+    else:
+        return True
 
 
 def compute_msagent_dr_least_setup_plus_test_time(data, jobs, operations, testers, configurations, localBags, opName, testerName) -> float:
@@ -129,7 +130,8 @@ def compute_msagent_dr_least_setup_plus_test_time(data, jobs, operations, tester
     - To compute the setup of configuration and test time of an operation on that config, we take avg. setup of that config, avg. test time of operation on that config.
     """
     opType = operations[opName]['opType']
-    op_config_set = set(data['operations']['items'][opType]['compatibleConfigurations'])
+    productName = operations[opName]['productName']
+    op_config_set = set(data['operations']['items'][opType]['compatibleConfigurations'][productName])
     tester_config_set = set(data['testers']['items'][testerName]['supportedConfigurations'])
     feasible_config_set = op_config_set.intersection(tester_config_set)
 
@@ -140,7 +142,7 @@ def compute_msagent_dr_least_setup_plus_test_time(data, jobs, operations, tester
     avg_setup_plus_test_times = []
     for config in feasible_config_set:
         avg_setup_time = configurations[config]['averageSetupTime']
-        avg_test_time = obs_utils.average(data['operations']['items'][opType]['estimatedTestTime'][config])
+        avg_test_time = obs_utils.average(data['operations']['items'][opType]['estimatedTestTime'][productName])
         avg_setup_plus_test_times.append(avg_setup_time + avg_test_time)
     return np.average(avg_setup_plus_test_times)
 
@@ -148,7 +150,7 @@ def compute_msagent_dr_least_setup_plus_test_time(data, jobs, operations, tester
 def compute_msagent_dr_least_total_setup_plus_test_time_of_local_bag(data, jobs, operations, testers, configurations, localBags, opName, testerName) -> float:
     """Returns the total setup plus test time of corresponding local bag
     """
-    return obs_utils.compute_total_setup_plus_test_time_of_local_bag(data, operations, configurations, localBags[testerName], testerName)
+    return obs_utils.compute_total_setup_plus_test_time_of_local_bag(data, jobs, operations, configurations, localBags[testerName])
 
 
 def compute_msagent_dr_least_num_of_operations_in_local_bag(data, jobs, operations, testers, configurations, localBags, opName, testerName) -> float:
@@ -267,7 +269,7 @@ def compute_osagent_dr_earliest_due_date(data, jobs, operations, testers, config
 
 
 def compute_osagent_dr_least_slack(data, jobs, operations, testers, configurations, localBags, testerName, opName, currentTime) -> float:
-    """Returns the available slack of the corresponding job
+    """Returns the available slack of the corrsponding job
     """
     blocked_ops_setup_plus_test_time = 0
     jobName = operations[opName]['jobName']
@@ -287,8 +289,11 @@ def compute_osagent_dr_least_setup_plus_test_time(data, jobs, operations, tester
     - First, finds the intersection of config sets of tester and operation
     - Calculates setup time component by considering the setup change from current machine configuration to the configuration under consideration from the common config set.
     """
+    jobName = operations[opName]['jobName']
+    productName = jobs[jobName]['productName']
+
     opType = operations[opName]['opType']
-    op_config_set = set(data['operations']['items'][opType]['compatibleConfigurations'])
+    op_config_set = set(data['operations']['items'][opType]['compatibleConfigurations'][productName])
     tester_config_set = set(data['testers']['items'][testerName]['supportedConfigurations'])
     feasible_config_set = op_config_set.intersection(tester_config_set)
     current_tester_config = testers[testerName]['currentConfiguration']
@@ -297,7 +302,7 @@ def compute_osagent_dr_least_setup_plus_test_time(data, jobs, operations, tester
     setup_plus_test_times = []
     for config in feasible_config_set:
         setup_time = data['configurations']['items'][config]['setupTimes'][current_tester_config_index]
-        test_time = obs_utils.average(data['operations']['items'][opType]['estimatedTestTime'][config])
+        test_time = obs_utils.average(data['operations']['items'][opType]['estimatedTestTime'][productName])
         setup_plus_test_times.append(setup_time + test_time)
 
     return min(setup_plus_test_times)

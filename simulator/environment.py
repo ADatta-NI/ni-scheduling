@@ -96,7 +96,7 @@ class SchedulingEnv(MultiAgentEnv):
             infos dict
         """
         if (self.sampleRandomProblem):
-            filenames = [f"data/static_configuration_priority{i}.json" for i in range(1, 101)]
+            filenames = [f"/home/aniruddha/ni-scheduling/simulator/data/small/static_configuration_{i}.json" for i in range(1, 10)]
             chosen_filename = random.choice(filenames)
             self.config['staticConfigurationFilePath'] = chosen_filename
             self.__init__(self.config)
@@ -623,6 +623,7 @@ class SchedulingEnv(MultiAgentEnv):
         if self.operations[operation]['isRootOp'] == True:
             # print('started processing root operation', operation)
             self.jobs[self.operations[operation]['jobName']]['status'] = JobStatus.IN_PROGRESS
+            ## access the product name from here and pass it to time estimation
 
         # Update operation status
         prevConfig = self.testers[testerName]['previousConfiguration']

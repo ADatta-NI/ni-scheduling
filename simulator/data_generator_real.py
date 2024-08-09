@@ -2,23 +2,61 @@ import random
 import json
 import networkx as nx
 import numpy as np
-from constants import DATA_GENERATOR_TRAIN_SEED, DATA_GENERATOR_TEST_SEED 
+import datetime
+from datetime import datetime
+DATA_GENERATOR_TRAIN_SEED = 100
+DATA_GENERATOR_TEST_SEED = 42
+
+# TODO Create a operation to product mapping
+# TODO map the test time for each product in the config files
+# TODO study the zeno dataset and find the relationship of products and operations with due dates
+# in the environment instead of configuration used apply product being tested
+# only for the estimated time and the other related codes if necessary
+# mostly it is used only in the sample part
+
+# TODO convert the integer priority to float priority
+# Add the priority field to the products
+
+
+# TODO change all the wip identity to product part number
+
+
 class DataGenerator:
-    def __init__(self, config=None):
+    def __init__(self, config = None, unique_testers = None, unique_configurations = None ):
         self.config = config or {}
         self.dirPath = self.config.get('dirPath')
         self.purpose = self.config.get('purpose')
+        self.productPath = self.config.get('productPath')
+        self.configPath = self.config.get('configPath')
+        self.originalconfigPath = self.config.get('originalconfigPath')
+        self.unique_testers = unique_testers
+        self.unique_configurations = unique_configurations
         random.seed(DATA_GENERATOR_TRAIN_SEED if self.purpose == 'train' else DATA_GENERATOR_TEST_SEED)
 
     def generate_and_save(self):
         self._num_of_static_configuration_files = self.config.get('numOfStaticConfigurationFiles')
         for idx in range(self._num_of_static_configuration_files):
             self._generate_and_save_single_config(idx + 1)
-        
+
 
     def _generate_and_save_single_config(self, idx):
-        # Initialize data 
+        # Initialize data
         self.data = {}
+        self.resource_config_mapping = {}
+        self.opseq_config_mapping = {}
+        self.product_operation_mapping = {}
+        self.operation_product_mapping = {}
+        self.product_arrival_mapping = {}
+        self.product_operation_testtime_mapping = {}
+        self.due_date_mapping = {}
+        self.product_quantity_mapping = {}
+        self.opseq_org_config_mapping = {}
+
+
+
+
+        ## Generate mappings
+        self._create_mappings()
 
         # Generate configurations
         self._generate_configurations()
@@ -32,10 +70,134 @@ class DataGenerator:
         # Generate products
         self._generate_products()
 
-        filePath = self.dirPath + 'static_configuration_' + str(idx) + '.json'
+        fileIndex = self.productPath.split('/')[-1]
+
+        filePath = self.dirPath + 'static_configuration_' + '_all_' + str(fileIndex)
         with open(filePath, 'w') as f:
             json.dump(self.data, f)
 
+
+    def _create_mappings(self):
+       # Read JSON file
+
+       print('called_1')
+       with open(self.configPath, 'r') as json_file:
+            config_data = json.load(json_file)
+       with open(self.originalconfigPath, 'r') as json_file:
+            config_org_data = json.load(json_file)
+       with open(self.productPath, 'r') as json_file:
+            product_data = json.load(json_file)
+
+       # Initialize mappings
+
+
+       # Create a mapping between "required_asset_pn" and "configuration"
+       for entry in config_data["prod_map_alt_boms"]:
+          resource_id = entry["required_asset_pn"]
+          config = entry["configuration"]
+          if resource_id not in self.resource_config_mapping:
+             self.resource_config_mapping[resource_id] = {"configuration": [config]}
+
+
+      # Create a mapping between "op_sequence" and "configuration"
+       for entry in config_org_data["prod_map_alt_boms"]:
+        op_sequence = f'O{entry["op_sequence"]}'
+        config = entry["configuration"]
+        if op_sequence not in self.opseq_org_config_mapping:
+           self.opseq_org_config_mapping[op_sequence] = {"configuration": [config]}
+        elif config not in self.opseq_org_config_mapping[op_sequence]["configuration"]:
+           self.opseq_org_config_mapping[op_sequence]["configuration"].append(config)
+       #print(len(self.opseq_org_config_mapping['O135']['configuration']))
+
+
+
+
+       # Create a mapping between "op_sequence" and "configuration"
+       for entry in config_data["prod_map_alt_boms"]:
+        op_sequence = f'O{entry["op_sequence"]}'
+        prefix = op_sequence.split('_copy_')[0]
+        #config = entry["configuration"]
+        if op_sequence not in self.opseq_config_mapping:
+           self.opseq_config_mapping[op_sequence] = self.opseq_org_config_mapping[prefix]["configuration"]
+        # elif config not in self.opseq_config_mapping[op_sequence]:
+           # self.opseq_config_mapping[op_sequence].append(config)
+
+
+
+       for entry in product_data["zeno_production_schedule"]:
+        product_sequence = f'P{entry["part_number"]}'
+        op_sequence = f'O{entry["operation_sequence"]}'
+
+        ## product to operation mapping
+        if product_sequence not in self.product_operation_mapping:
+           self.product_operation_mapping[product_sequence] = {"operation": [op_sequence]}
+        elif op_sequence not in self.product_operation_mapping[product_sequence]["operation"]:
+           self.product_operation_mapping[product_sequence]["operation"].append(op_sequence)
+
+
+        ## operation to product mapping for the distinct estimated time
+        if op_sequence not in self.operation_product_mapping:
+           self.operation_product_mapping[op_sequence] = {"product": [product_sequence]}
+        elif product_sequence not in self.operation_product_mapping[op_sequence]["operation"]:
+           self.operation_product_mapping[op_sequence]["product"].append(product_sequence)
+
+       for entry in product_data["zeno_production_schedule"]:
+
+        product_sequence = f'P{entry["part_number"]}'
+        quantity = entry["product_quantity"]
+
+
+        if product_sequence not in self.product_quantity_mapping:
+           self.product_quantity_mapping[product_sequence] = {"quantity": [quantity]}
+        elif quantity not in self.product_quantity_mapping[product_sequence]["quantity"]:
+           self.product_quantity_mapping[product_sequence]["quantity"].append(quantity)
+
+
+       for entry in product_data["zeno_production_schedule"]:
+        product_sequence = f'P{entry["part_number"]}'
+        creation_date = datetime.strptime(entry["job_creation_date"], "%Y-%m-%d %H:%M:%S")
+        imported_date = datetime.strptime(entry["job_imported_date"], "%Y-%m-%d %H:%M:%S")
+        arrival_time = (imported_date - creation_date).total_seconds() / 60
+
+
+        if product_sequence not in self.product_arrival_mapping:
+           self.product_arrival_mapping[product_sequence] = {"arrival_time": [arrival_time]}
+        elif arrival_time not in self.product_arrival_mapping[product_sequence]["arrival_time"]:
+           self.product_arrival_mapping[product_sequence]["arrival_time"].append(arrival_time)
+
+      ##use in operation estimated test time
+       for entry in product_data["zeno_production_schedule"]:
+        product_sequence = f'P{entry["part_number"]}'
+        op_sequence = f'O{entry["operation_sequence"]}'
+        print(op_sequence)
+        lot_time = entry["sum_lot_time"]
+        item_time = entry["sum_item_time"]
+        quantity = entry["product_quantity"]
+        total_time = (lot_time + quantity * item_time) * 60
+        ## use this double mapping to correctly assign the unique test times for each product operation pair
+        ## to the correct product config for each distinct operation
+        ## product remains the same but the total time is different under each operation
+
+        if product_sequence not in self.product_operation_testtime_mapping:
+           self.product_operation_testtime_mapping[product_sequence] = {"estimated_time" : {op_sequence : [total_time]}}
+        elif op_sequence not in  self.product_operation_testtime_mapping[product_sequence]["estimated_time"]:
+          self.product_operation_testtime_mapping[product_sequence]["estimated_time"][op_sequence] = total_time
+
+       #print(self.product_testtime_mapping['O140_copy_2313']['estimated_time'])
+       #print(self.opseq_config_mapping['O140_copy_2313']['configuration'])
+
+
+        ##use this in compute due date
+       for entry in product_data["zeno_production_schedule"]:
+        product_sequence = f'P{entry["part_number"]}'
+        creation_date = datetime.strptime(entry["product_creation_date"], "%Y-%m-%d %H:%M:%S")
+        due_date = datetime.strptime(entry["due_date"], "%Y-%m-%d %H:%M:%S")
+        due_date_time = (due_date - creation_date).total_seconds() / 60
+      ## make the changes here as well
+        if product_sequence not in self.due_date_mapping:
+           self.due_date_mapping[product_sequence] = {"due_date_time": [due_date_time]}
+        elif due_date_time <  min(self.due_date_mapping[product_sequence]["due_date_time"]):
+           self.due_date_mapping[product_sequence] = {"due_date_time": [due_date_time]}
 
     def _generate_products(self):
         ''' Generates the products section of data.
@@ -44,19 +206,20 @@ class DataGenerator:
         - The number of operations for a product should be in the range ['minNumOperationsPerProduct', 'maxNumOperationsPerProduct'], if numOfOperations is less than min or max of operationsPerProduct, then numOfOperations should be considered.
         - The number of edges in each product graph should be tried to be fit in this percentage range ['minProductEdgesPercent', 'maxProductEdgesPercent'], where percentage is with respect to a complete graph.
         '''
-        self.numOfProducts = random.randint(self.config.get('minProducts'), self.config.get('maxProducts'))
 
+
+        self.numOfProducts = len(self.product_operation_mapping)
         self.data['products'] = {
             'count': self.numOfProducts,
             'items': {
-                'P' + str(index + 1) : {
-                    'index': index,
+                 product_ids: {
+                    'index': int(product_ids[1:]) ,
                     'arrival': '',
-                    'quantity': random.randint(self.config.get('minQuantity'), self.config.get('maxQuantity')),
+                    'quantity': self.product_quantity_mapping[product_ids]["quantity"][0],
                     'duedate': '',
                     'operations': '',
                     'dependencies': []
-                } for index in range(self.numOfProducts)
+                } for product_ids in self.product_operation_mapping.keys()
             }
         }
 
@@ -64,28 +227,28 @@ class DataGenerator:
         ops = list(self.data['operations']['items'].keys())
         arrival = 0
         for productName in self.data['products']['items'].keys():
-            numOps = random.randint(min(self.numOfOperations, self.config.get('minNumOperationsPerProduct')), min(self.numOfOperations, self.config.get('maxNumOperationsPerProduct')))
+            numOps = len(self.product_operation_mapping[productName]['operation']) #length of operation
             edgePercent = random.uniform(self.config.get('minProductEdgesPercent'), self.config.get('maxProductEdgesPercent'))
-            selectedOps = random.sample(ops, numOps)
+            #edgePercent = 1.00
+            selectedOps = self.product_operation_mapping[productName]['operation']
 
-            nodes, edges = self._generate_random_connected_dag(numOps, edgePercent)
+            nodes, edges = self._generate_chain_connected_dag(numOps)
 
             self.data['products']['items'][productName]['operations'] = selectedOps
             self.data['products']['items'][productName]['dependencies'] = edges
             self.data['products']['items'][productName]['arrival'] = arrival
-            self.data['products']['items'][productName]['duedate'] = self._compute_due_date_for_product(productName)
-            
-            
-            arrival += random.uniform(self.config.get('minArrivalTimeGap'), self.config.get('maxArrivalTimeGap'))
+            self.data['products']['items'][productName]['duedate'] = self.due_date_mapping[productName]["due_date_time"][0]
 
 
-    def _compute_due_date_for_product(self, productName, strictness_weight=0.9):
+            arrival += self.product_arrival_mapping[productName]["arrival_time"][0]
+
+    def _compute_due_date_for_product(self, productName, strictness_weight=1.0):
         ''' Computes the due date for a product.
 
-        - Since we currently assume parallel processing of operations, this method currently approximates the test time of the graph to be 
+        - Since we currently assume parallel processing of operations, this method currently approximates the test time of the graph to be
         the test time of the heaviest path in the DAG.
         - Here, the heaviest path refers to the path having maximum setup plus test time.
-        - Multiplies with the quantity and adds arrival time for an approximate optimistic due date. 
+        - Multiplies with the quantity and adds arrival time for an approximate optimistic due date.
         - Multiply by a weight that controls the strictness of the duedate (less weight => stricter duedate)
         '''
         # Compute Heaviest Path
@@ -110,11 +273,11 @@ class DataGenerator:
 
         # Approx. due date
         due_date = self.data['products']['items'][productName]['arrival']
-        quantity_per_tester = self.data['products']['items'][productName]['quantity'] / self.data['testers']['count'] 
+        quantity_per_tester = self.data['products']['items'][productName]['quantity'] / self.data['testers']['count']
         due_date += processing_time * (1 if quantity_per_tester < 1 else quantity_per_tester)
 
         return due_date * strictness_weight
-    
+
     def _find_weight_of_path(self, path, productName):
         ''' For the given path from added source (-1) to added sink (-2), we compute the sum of setup plus test time of all the modes except source and sink
         '''
@@ -142,11 +305,11 @@ class DataGenerator:
 
         - Here weight refers to the setup plus test time of the path.
         '''
-        
+
         sources = [x for x in G.nodes() if G.in_degree(x)==0]
         targets = [x for x in G.nodes() if G.out_degree(x)==0]
 
-        # Added dummy source (-1) and dummy sink (-2). 
+        # Added dummy source (-1) and dummy sink (-2).
         G.add_node(-1)
         G.add_node(-2)
 
@@ -173,7 +336,7 @@ class DataGenerator:
 
     def _generate_operations(self):
         ''' Generates the operations section of data.
-        
+
         - The number of operations should be in the range ['minOperations', 'maxOperations'].
         - The distribution of estimatedTestTime is assumed to be 'normal'
         - The mean of estimatedTestTime distribution should be in the range ['minMeanEstimatedTestTime', 'maxMeanEstimatedTestTime']
@@ -181,61 +344,69 @@ class DataGenerator:
         - The number of supportedConfigurations should be in the range ['minSupportedConfigurationsPerOperation', 'maxSupportedConfigurationsPerOperation'],
             if numOfConfigs is less than min or max supported configurations per operation, numOfConfigs should be used.
         '''
-        self.numOfOperations = random.randint(self.config.get('minOperations'), self.config.get('maxOperations'))
+        self.numOfOperations = len(self.operation_product_mapping)
+        ## use product operation test time double mapping to correctly
+        ## assign the unique test times for each product operation pair
+        ## to the correct product config for each distinct operation
+        ## product remains the same but the total time is different under each operation
 
-        minSupportedConfigurationsPerOperation = min(self.config.get('minSupportedConfigurationsPerOperation'), self.numOfConfigs)
-        maxSupportedConfigurationsPerOperation = min(self.config.get('maxSupportedConfigurationsPerOperation'), self.numOfConfigs)
         self.data['operations'] = {
             'count': self.numOfOperations,
-            'items': {
-                'O' + str(index + 1) : {
-                    'estimatedTestTime': {},
-                    'compatibleConfigurations': [
-                        'K' + str(config + 1) for config in random.sample(range(self.numOfConfigs), random.randint(minSupportedConfigurationsPerOperation, maxSupportedConfigurationsPerOperation))
-                    ]
-                } for index in range(self.numOfOperations)
-            }
+            'items': {}
         }
 
-        # Generating estimatedTestTime for operations on corresponding configurations
-        minMeanEstimatedTestTime = self.config.get('minMeanEstimatedTestTime')
-        maxMeanEstimatedTestTime = self.config.get('maxMeanEstimatedTestTime')
+        for ops in self.operation_product_mapping.keys():
+            config_list = self.opseq_config_mapping.get(ops, [])
+            product_list = self.operation_product_mapping.get(ops, [])
+            print(config_list)
+            print(product_list)
+            #compatible_configs = [config for config in config_list if config in self.unique_configurations]
+            self.data['operations']['items'][ops] = {
+                 'estimatedTestTime': {},
+                 'compatibleConfigurations': config_list,
+                 'compatibleProducts': product_list
+
+            }
+
+        #compatible_config_count = sum(len(entry['compatibleConfigurations']) for entry in self.data['operations']['items'].values())
+        #print("Number of compatible configurations:", compatible_config_count)
+
+       # Generating estimatedTestTime for operations on corresponding products
+       # changed it from the earlier implementation
+       # Generating estimatedTestTime for operations on corresponding configurations
+
         minStdEstimatedTestTime = self.config.get('minStdEstimatedTestTime')
         maxStdEstimatedTestTime = self.config.get('maxStdEstimatedTestTime')
         for op in self.data['operations']['items'].keys():
-            for config in self.data['operations']['items'][op]['compatibleConfigurations']:
-                self.data['operations']['items'][op]['estimatedTestTime'][config] = {
+            for product in self.data['operations']['items'][op]['compatibleProducts']:
+                print(self.data['operations']['items'][op]['compatibleProducts'])
+                self.data['operations']['items'][op]['estimatedTestTime'][product] = {
                     'distribution': 'normal',
-                    'mean': random.uniform(minMeanEstimatedTestTime, maxMeanEstimatedTestTime),
+                    'mean': self.product_operation_testtime_mapping[product]["estimated_time"][op],
                     'std': random.uniform(minStdEstimatedTestTime, maxStdEstimatedTestTime)
                 }
-
 
     def _generate_testers(self):
         ''' Generates the testers section of data.
 
         - The number of testers should be in the range ['minTesters', 'maxTesters'].
         - The tester names are prefixed with 'T', followed by the random index assigned to it + 1.
-        - The number of supported configurations for a tester should be in the range ['minSupportedConfigurationsPerTester', 'maxSupportedConfigurationsPerTester'], 
+        - The number of supported configurations for a tester should be in the range ['minSupportedConfigurationsPerTester', 'maxSupportedConfigurationsPerTester'],
             if numOfConfigs is less than min or max supported configurations per tester, numOfConfigs should be used.
         '''
-        self.numOfTesters = random.randint(self.config.get('minTesters'), self.config.get('maxTesters'))
 
-        minSupportedConfigurationsPerTester = min(self.config.get('minSupportedConfigurationsPerTester'), self.numOfConfigs)
-        maxSupportedConfigurationsPerTester = min(self.config.get('maxSupportedConfigurationsPerTester'), self.numOfConfigs)
+        self.numOfTesters = len(self.unique_testers)
         self.data['testers'] = {
             'count': self.numOfTesters,
             'items': {
-                'T' + str(index + 1) : {
-                    'supportedConfigurations': [
-                        'K' + str(config + 1) for config in random.sample(range(self.numOfConfigs), random.randint(minSupportedConfigurationsPerTester, maxSupportedConfigurationsPerTester))
-                    ] 
-                } for index in range(self.numOfTesters)
+                testers : {
+                    'supportedConfigurations': self.resource_config_mapping[testers]['configuration']
+
+                } for testers in self.unique_testers
             }
         }
 
-        self._verify_and_add_unassigned_configurations()
-    
+        #self._verify_and_add_unassigned_configurations()
 
     def _verify_and_add_unassigned_configurations(self):
         ''' This checks if any configuration is left unassigned to any tester and adds it to a randomly selected tester.
@@ -249,9 +420,9 @@ class DataGenerator:
                     found = True
                     break
             if not found:
+                #print(list(self.data['testers']['items'].keys()))
                 tester = random.choice(list(self.data['testers']['items'].keys()))
                 self.data['testers']['items'][tester]['supportedConfigurations'].append(config)
-
 
     def _generate_configurations(self):
         ''' Generates the configurations section of data.
@@ -261,17 +432,19 @@ class DataGenerator:
         - The 'setupTimes' of configurations should be in the range ['minSetupTime', 'maxSetupTime']
         - The setupTime from a configuration to the same configuration should be 0.
         '''
-        self.numOfConfigs = random.randint(self.config.get('minConfigurations'), self.config.get('maxConfigurations'))
 
+        self.numOfConfigs = len(self.unique_configurations)
         self.data['configurations'] = {
             'count': self.numOfConfigs,
             'items': {
-                'K' + str(index + 1) : {
+                 config : {
                     'index': index,
                     'setupTimes': self._generate_setup_times(index)
-                } for index in range(self.numOfConfigs)
+                } for index, config in enumerate(self.unique_configurations)
             }
         }
+
+
 
 
     def _generate_setup_times(self, index):
@@ -287,7 +460,7 @@ class DataGenerator:
         setupTimes[index] = 0
 
         return setupTimes
-    
+
 
     def _generate_random_connected_dag(self, numOfNodes, percentOfEdges):
         ''' Generates a random connected directed acyclic graph containing 'numOfNodes' number of nodes and possibly 'percentOfEdges' percent of total possible edges.
@@ -301,7 +474,7 @@ class DataGenerator:
         G = nx.from_numpy_array(adj_mat, create_using=nx.DiGraph)
 
         totalNumOfEdges = (numOfNodes * (numOfNodes - 1)) / 2
-        edgesThreshold = percentOfEdges * totalNumOfEdges 
+        edgesThreshold = percentOfEdges * totalNumOfEdges
         triesThreshold = totalNumOfEdges
         numOfTries = 0
 
@@ -321,78 +494,51 @@ class DataGenerator:
         edges = list(G.edges)
 
         return nodes, edges
+    def _generate_chain_connected_dag(self, numOfNodes):
+        ''' Generates a random connected directed acyclic graph containing 'numOfNodes' number of nodes and possibly 'percentOfEdges' percent of total possible edges.
+
+        Procedure:
+        - Create a full lower triangular matrix (assured to be DAG)
+        - Randomly remove edges if that edge doesn't loose the connectivity and DAG-ness of the graph
+        '''
+
+        G = nx.graph()
+
+        for i in range(numOfNodes):
+            G.add_node(int(i))
+
+
+        nodes = list(G.nodes)
+        edges = list(G.edges)
+
+        return nodes, edges
 
 
 if __name__ == "__main__":
-
+## change this to read the float portion of the dataset
     config = {
-        'dirPath': 'data/',
+
+        #'dirPath': '/content/drive/MyDrive/real_life_data/',
+        'dirPath': '/content/drive/MyDrive/divided_windows_zeno_modified_creation/',
+        'productPath': '/content/drive/MyDrive/divided_windows_zeno_modified_creation/D_2.json',
+        'configPath' : '/content/drive/MyDrive/compat_original_filtered_mod.json',
+        'originalconfigPath' :  '/content/drive/MyDrive/compat_original_filtered.json',
         'purpose': 'train',
-        'numOfStaticConfigurationFiles': 100,
+        'numOfStaticConfigurationFiles': 1,
 
-        # The number of configurations/modes available in the system (across all testers) 
-        'minConfigurations': 2,
-        'maxConfigurations': 50,
-        
-        # The setup time needed to change from one configuration/mode to another.
-        'minSetupTime': 2,
-        'maxSetupTime': 60,
-
-        # The number of testers in the system
-        'minTesters': 2,
-        'maxTesters': 200,
-
-        # The number of configurations/modes per tester
-        'minSupportedConfigurationsPerTester': 2,
-        'maxSupportedConfigurationsPerTester': 50,
-
-        # The number of unique operations/tests that can be performed in the system (across all configurations) 
-        'minOperations': 5,
-        'maxOperations': 15,
-
-        # The estimated avg test time of an operation
-        'minMeanEstimatedTestTime': 2,
-        'maxMeanEstimatedTestTime': 500,
-
+        #
         # The estimated avg standard deviation of test time of an operation
         'minStdEstimatedTestTime': 2,
         'maxStdEstimatedTestTime': 5,
+        # The setup time needed to change from one configuration/mode to another.
+        'minSetupTime': 0,
+        'maxSetupTime': 0,
 
+        'minProductEdgesPercent': 0.50,
+        'maxProductEdgesPercent': 0.25,
 
-        # Context: An operation/test can be performed using different configurations. 
-        # The number of configurations which can support an operation 
-        'minSupportedConfigurationsPerOperation': 5,
-        'maxSupportedConfigurationsPerOperation': 15,
-
-        # The number of products to be considered for the schedule (unique test entities / product graphs)
-        'minProducts': 2,
-        'maxProducts': 5,
-
-        # The number of items of each product which are requested for testing.
-        'minQuantity': 5,
-        'maxQuantity': 20,
-
-        # The number of test operations/nodes needed to complete testing of a product
-        'minNumOperationsPerProduct': 5,
-        'maxNumOperationsPerProduct': 15,
-
-        # The arrival time distribution of the products (how frequently does the new products arrive)
-        'minArrivalTimeGap': 50,
-        'maxArrivalTimeGap': 100,
-
-        # Context: If there are n nodes, a complete graph contains n*(n-1)/2 nodes (less than that for it to be a DAG, but we'll consider this), 
-        # But in a product graph we won't have all possible dependencies. 
-        # These attributes capture the minimum and maximum percentage of connectivity of product graphs which will is used for generating 
-        # different sparsely connected directed acyclic graphs.
-        #
-        # Ex: If there are 5 nodes (tests) needed for testing a product, how many dependencies could be there? 
-        # (Here a dependency between ('a' and 'b') means 'b' can be performed only once 'a' is done)
-        #
-        # The number of edges percentage
-        'minProductEdgesPercent': 0.25,
-        'maxProductEdgesPercent': 0.5,
-        
     }
 
-    datagen = DataGenerator(config)
+
+    datagen = DataGenerator(config,unique_testers,unique_configurations)
     datagen.generate_and_save()
